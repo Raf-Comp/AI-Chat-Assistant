@@ -28,6 +28,9 @@ define('AICA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AICA_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('AICA_VERSION', '1.0.0');
 
+// Załaduj funkcje pomocnicze
+require_once AICA_PLUGIN_DIR . 'includes/Helpers.php';
+
 // Autoloader klas
 spl_autoload_register(function ($class) {
     // Prefiks naszej wtyczki

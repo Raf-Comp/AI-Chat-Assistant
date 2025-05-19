@@ -4,6 +4,10 @@ namespace AICA\Ajax;
 use AICA\Services\ChatService;
 use AICA\Services\RepositoryService;
 use AICA\Services\FileService;
+use AICA\API\ClaudeClient;
+use AICA\API\GitHubClient;
+use AICA\API\GitLabClient;
+use AICA\API\BitbucketClient;
 
 class Handler {
     public function init() {
@@ -16,13 +20,16 @@ class Handler {
         add_action('wp_ajax_aica_get_file_content', [$this, 'get_file_content']);
         add_action('wp_ajax_aica_search_repository', [$this, 'search_repository']);
         add_action('wp_ajax_aica_delete_session', [$this, 'delete_session']);
-        add_action('wp_ajax_aica_test_claude_api', [$this, 'test_claude_api']);
+        add_action('wp_ajax_aica_test_api_connection', [$this, 'test_api_connection']);
+        
+        // Obsługa zapisu ustawień
+        add_action('admin_post_save_aica_settings', [$this, 'save_settings']);
     }
 
     /**
-     * Testowanie połączenia z API Claude (AJAX)
+     * Testowanie połączenia z API (AJAX)
      */
-    public function test_claude_api() {
+    public function test_api_connection() {
         // Weryfikacja nonce
         if (!check_ajax_referer('aica_settings_nonce', 'nonce', false)) {
             wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
@@ -30,22 +37,148 @@ class Handler {
         }
 
         // Walidacja parametrów
-        $api_key = isset($_POST['api_key']) ? sanitize_text_field($_POST['api_key']) : '';
+        $api_type = isset($_POST['api_type']) ? sanitize_text_field($_POST['api_type']) : '';
         
-        if (empty($api_key)) {
-            wp_send_json_error(['message' => __('Brakujący klucz API.', 'ai-chat-assistant')]);
+        if (empty($api_type)) {
+            wp_send_json_error(['message' => __('Brakujący typ API.', 'ai-chat-assistant')]);
             exit;
         }
+        
+        // Testowanie odpowiedniego API
+        switch ($api_type) {
+            case 'claude':
+                $api_key = isset($_POST['api_key']) ? sanitize_text_field($_POST['api_key']) : '';
+                
+                if (empty($api_key)) {
+                    wp_send_json_error(['message' => __('Brakujący klucz API.', 'ai-chat-assistant')]);
+                    exit;
+                }
 
-        // Testowanie połączenia
-        $claude_client = new \AICA\API\ClaudeClient($api_key);
-        $test_result = $claude_client->test_connection();
+                // Testowanie połączenia
+                $claude_client = new ClaudeClient($api_key);
+                $test_result = $claude_client->test_connection();
 
-        if ($test_result) {
-            wp_send_json_success(['message' => __('Połączenie z API Claude działa poprawnie.', 'ai-chat-assistant')]);
-        } else {
-            wp_send_json_error(['message' => __('Nie udało się połączyć z API Claude. Sprawdź klucz API.', 'ai-chat-assistant')]);
+                if ($test_result) {
+                    wp_send_json_success(['message' => __('Połączenie z API Claude działa poprawnie.', 'ai-chat-assistant')]);
+                } else {
+                    wp_send_json_error(['message' => __('Nie udało się połączyć z API Claude. Sprawdź klucz API.', 'ai-chat-assistant')]);
+                }
+                break;
+                
+            case 'github':
+                $api_key = isset($_POST['api_key']) ? sanitize_text_field($_POST['api_key']) : '';
+                
+                if (empty($api_key)) {
+                    wp_send_json_error(['message' => __('Brakujący token GitHub.', 'ai-chat-assistant')]);
+                    exit;
+                }
+
+                // Testowanie połączenia
+                $github_client = new GitHubClient($api_key);
+                $test_result = $github_client->test_connection();
+
+                if ($test_result) {
+                    wp_send_json_success(['message' => __('Połączenie z API GitHub działa poprawnie.', 'ai-chat-assistant')]);
+                } else {
+                    wp_send_json_error(['message' => __('Nie udało się połączyć z API GitHub. Sprawdź token.', 'ai-chat-assistant')]);
+                }
+                break;
+                
+            case 'gitlab':
+                $api_key = isset($_POST['api_key']) ? sanitize_text_field($_POST['api_key']) : '';
+                
+                if (empty($api_key)) {
+                    wp_send_json_error(['message' => __('Brakujący token GitLab.', 'ai-chat-assistant')]);
+                    exit;
+                }
+
+                // Testowanie połączenia
+                $gitlab_client = new GitLabClient($api_key);
+                $test_result = $gitlab_client->test_connection();
+
+                if ($test_result) {
+                    wp_send_json_success(['message' => __('Połączenie z API GitLab działa poprawnie.', 'ai-chat-assistant')]);
+                } else {
+                    wp_send_json_error(['message' => __('Nie udało się połączyć z API GitLab. Sprawdź token.', 'ai-chat-assistant')]);
+                }
+                break;
+                
+            case 'bitbucket':
+                $username = isset($_POST['username']) ? sanitize_text_field($_POST['username']) : '';
+                $password = isset($_POST['password']) ? sanitize_text_field($_POST['password']) : '';
+                
+                if (empty($username) || empty($password)) {
+                    wp_send_json_error(['message' => __('Brakujące dane uwierzytelniające Bitbucket.', 'ai-chat-assistant')]);
+                    exit;
+                }
+
+                // Testowanie połączenia
+                $bitbucket_client = new BitbucketClient($username, $password);
+                $test_result = $bitbucket_client->test_connection();
+
+                if ($test_result) {
+                    wp_send_json_success(['message' => __('Połączenie z API Bitbucket działa poprawnie.', 'ai-chat-assistant')]);
+                } else {
+                    wp_send_json_error(['message' => __('Nie udało się połączyć z API Bitbucket. Sprawdź dane.', 'ai-chat-assistant')]);
+                }
+                break;
+                
+            default:
+                wp_send_json_error(['message' => __('Nieznany typ API.', 'ai-chat-assistant')]);
+                break;
         }
+        
+        exit;
+    }
+    
+    /**
+     * Zapisywanie ustawień
+     */
+    public function save_settings() {
+        // Weryfikacja nonce
+        if (!isset($_POST['aica_settings_nonce']) || !wp_verify_nonce($_POST['aica_settings_nonce'], 'aica_settings_nonce')) {
+            wp_die(__('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant'));
+        }
+        
+        // Sprawdzenie uprawnień
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Nie masz uprawnień do zmiany ustawień.', 'ai-chat-assistant'));
+        }
+        
+        // Pobieranie i sanityzacja danych z formularza
+        $claude_api_key = isset($_POST['aica_claude_api_key']) ? sanitize_text_field($_POST['aica_claude_api_key']) : '';
+        $claude_model = isset($_POST['aica_claude_model']) ? sanitize_text_field($_POST['aica_claude_model']) : 'claude-3-haiku-20240307';
+        $max_tokens = isset($_POST['aica_max_tokens']) ? (int)$_POST['aica_max_tokens'] : 4000;
+        $github_token = isset($_POST['aica_github_token']) ? sanitize_text_field($_POST['aica_github_token']) : '';
+        $gitlab_token = isset($_POST['aica_gitlab_token']) ? sanitize_text_field($_POST['aica_gitlab_token']) : '';
+        $bitbucket_username = isset($_POST['aica_bitbucket_username']) ? sanitize_text_field($_POST['aica_bitbucket_username']) : '';
+        $bitbucket_app_password = isset($_POST['aica_bitbucket_app_password']) ? sanitize_text_field($_POST['aica_bitbucket_app_password']) : '';
+        $allowed_file_extensions = isset($_POST['aica_allowed_file_extensions']) ? sanitize_text_field($_POST['aica_allowed_file_extensions']) : '';
+        $debug_mode = isset($_POST['aica_debug_mode']) ? (bool)$_POST['aica_debug_mode'] : false;
+        
+        // Walidacja danych
+        if ($max_tokens < 1000) {
+            $max_tokens = 1000;
+        } elseif ($max_tokens > 100000) {
+            $max_tokens = 100000;
+        }
+        
+        // Zapisywanie opcji
+        aica_update_option('claude_api_key', $claude_api_key);
+        aica_update_option('claude_model', $claude_model);
+        aica_update_option('max_tokens', $max_tokens);
+        aica_update_option('github_token', $github_token);
+        aica_update_option('gitlab_token', $gitlab_token);
+        aica_update_option('bitbucket_username', $bitbucket_username);
+        aica_update_option('bitbucket_app_password', $bitbucket_app_password);
+        aica_update_option('allowed_file_extensions', $allowed_file_extensions);
+        aica_update_option('debug_mode', $debug_mode);
+        
+        // Logowanie informacji o zapisie ustawień
+        aica_log('Zapisano ustawienia wtyczki');
+        
+        // Przekierowanie z powrotem do strony ustawień
+        wp_redirect(add_query_arg('settings-updated', 'true', admin_url('admin.php?page=ai-chat-assistant-settings')));
         exit;
     }
 

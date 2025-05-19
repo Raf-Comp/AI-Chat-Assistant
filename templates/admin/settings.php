@@ -42,8 +42,9 @@ if (!defined('ABSPATH')) {
         </div>
 
         <div class="aica-settings-content">
-            <form method="post" action="options.php">
-                <?php wp_nonce_field('aica_settings_nonce'); ?>
+            <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" id="aica-settings-form">
+                <?php wp_nonce_field('aica_settings_nonce', 'aica_settings_nonce'); ?>
+                <input type="hidden" name="action" value="save_aica_settings">
                 
                 <div id="claude-settings" class="aica-tab-content active">
                     <div class="aica-settings-card">
@@ -63,7 +64,7 @@ if (!defined('ABSPATH')) {
                                 <div class="aica-field-input">
                                     <div class="aica-api-key-field">
                                         <input type="password" id="aica_claude_api_key" name="aica_claude_api_key" 
-                                            value="<?php echo esc_attr(get_option('aica_claude_api_key', '')); ?>" />
+                                            value="<?php echo esc_attr(aica_get_option('claude_api_key', '')); ?>" />
                                         <button type="button" class="aica-toggle-password" aria-label="<?php _e('Pokaż/ukryj hasło', 'ai-chat-assistant'); ?>">
                                             <span class="dashicons dashicons-visibility"></span>
                                         </button>
@@ -81,7 +82,7 @@ if (!defined('ABSPATH')) {
                                 <div class="aica-field-input">
                                     <select id="aica_claude_model" name="aica_claude_model">
                                         <?php 
-                                        $current_model = get_option('aica_claude_model', 'claude-3-haiku-20240307');
+                                        $current_model = aica_get_option('claude_model', 'claude-3-haiku-20240307');
                                         foreach ($available_models as $model_id => $model_name) {
                                             echo '<option value="' . esc_attr($model_id) . '" ' . selected($current_model, $model_id, false) . '>' . esc_html($model_name) . '</option>';
                                         }
@@ -101,10 +102,10 @@ if (!defined('ABSPATH')) {
                                     <div class="aica-range-field">
                                         <input type="range" id="aica_max_tokens_range" 
                                             min="1000" max="100000" step="1000" 
-                                            value="<?php echo esc_attr(get_option('aica_max_tokens', 4000)); ?>" />
+                                            value="<?php echo esc_attr(aica_get_option('max_tokens', 4000)); ?>" />
                                         <input type="number" id="aica_max_tokens" name="aica_max_tokens" 
                                             min="1000" max="100000" step="1000" 
-                                            value="<?php echo esc_attr(get_option('aica_max_tokens', 4000)); ?>" />
+                                            value="<?php echo esc_attr(aica_get_option('max_tokens', 4000)); ?>" />
                                     </div>
                                 </div>
                             </div>
@@ -138,12 +139,19 @@ if (!defined('ABSPATH')) {
                                 <div class="aica-field-input">
                                     <div class="aica-api-key-field">
                                         <input type="password" id="aica_github_token" name="aica_github_token" 
-                                            value="<?php echo esc_attr(get_option('aica_github_token', '')); ?>" />
+                                            value="<?php echo esc_attr(aica_get_option('github_token', '')); ?>" />
                                         <button type="button" class="aica-toggle-password" aria-label="<?php _e('Pokaż/ukryj hasło', 'ai-chat-assistant'); ?>">
                                             <span class="dashicons dashicons-visibility"></span>
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="aica-field-row aica-field-actions">
+                                <button type="button" id="test-github-api" class="button button-secondary aica-api-test-button">
+                                    <span class="dashicons dashicons-marker"></span>
+                                    <?php _e('Testuj połączenie z GitHub', 'ai-chat-assistant'); ?>
+                                </button>
+                                <div id="github-test-result" class="aica-api-test-result"></div>
                             </div>
                         </div>
                     </div>
@@ -165,12 +173,19 @@ if (!defined('ABSPATH')) {
                                 <div class="aica-field-input">
                                     <div class="aica-api-key-field">
                                         <input type="password" id="aica_gitlab_token" name="aica_gitlab_token" 
-                                            value="<?php echo esc_attr(get_option('aica_gitlab_token', '')); ?>" />
+                                            value="<?php echo esc_attr(aica_get_option('gitlab_token', '')); ?>" />
                                         <button type="button" class="aica-toggle-password" aria-label="<?php _e('Pokaż/ukryj hasło', 'ai-chat-assistant'); ?>">
                                             <span class="dashicons dashicons-visibility"></span>
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="aica-field-row aica-field-actions">
+                                <button type="button" id="test-gitlab-api" class="button button-secondary aica-api-test-button">
+                                    <span class="dashicons dashicons-marker"></span>
+                                    <?php _e('Testuj połączenie z GitLab', 'ai-chat-assistant'); ?>
+                                </button>
+                                <div id="gitlab-test-result" class="aica-api-test-result"></div>
                             </div>
                         </div>
                     </div>
@@ -190,7 +205,7 @@ if (!defined('ABSPATH')) {
                                 </div>
                                 <div class="aica-field-input">
                                     <input type="text" id="aica_bitbucket_username" name="aica_bitbucket_username" 
-                                        value="<?php echo esc_attr(get_option('aica_bitbucket_username', '')); ?>" />
+                                        value="<?php echo esc_attr(aica_get_option('bitbucket_username', '')); ?>" />
                                 </div>
                             </div>
                             
@@ -205,12 +220,19 @@ if (!defined('ABSPATH')) {
                                 <div class="aica-field-input">
                                     <div class="aica-api-key-field">
                                         <input type="password" id="aica_bitbucket_app_password" name="aica_bitbucket_app_password" 
-                                            value="<?php echo esc_attr(get_option('aica_bitbucket_app_password', '')); ?>" />
+                                            value="<?php echo esc_attr(aica_get_option('bitbucket_app_password', '')); ?>" />
                                         <button type="button" class="aica-toggle-password" aria-label="<?php _e('Pokaż/ukryj hasło', 'ai-chat-assistant'); ?>">
                                             <span class="dashicons dashicons-visibility"></span>
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="aica-field-row aica-field-actions">
+                                <button type="button" id="test-bitbucket-api" class="button button-secondary aica-api-test-button">
+                                    <span class="dashicons dashicons-marker"></span>
+                                    <?php _e('Testuj połączenie z Bitbucket', 'ai-chat-assistant'); ?>
+                                </button>
+                                <div id="bitbucket-test-result" class="aica-api-test-result"></div>
                             </div>
                         </div>
                     </div>
@@ -240,7 +262,7 @@ if (!defined('ABSPATH')) {
                                         </div>
                                         <div class="aica-tags-container" id="extensions-container">
                                             <?php 
-                                            $extensions = explode(',', get_option('aica_allowed_file_extensions', 'txt,pdf,php,js,css,html,json,md'));
+                                            $extensions = explode(',', aica_get_option('allowed_file_extensions', 'txt,pdf,php,js,css,html,json,md'));
                                             foreach ($extensions as $ext) {
                                                 $ext = trim($ext);
                                                 if (!empty($ext)) {
@@ -250,8 +272,23 @@ if (!defined('ABSPATH')) {
                                             ?>
                                         </div>
                                         <input type="hidden" id="aica_allowed_file_extensions" name="aica_allowed_file_extensions" 
-                                            value="<?php echo esc_attr(get_option('aica_allowed_file_extensions', 'txt,pdf,php,js,css,html,json,md')); ?>" />
+                                            value="<?php echo esc_attr(aica_get_option('allowed_file_extensions', 'txt,pdf,php,js,css,html,json,md')); ?>" />
                                     </div>
+                                </div>
+                            </div>
+                            
+                            <div class="aica-field-row">
+                                <div class="aica-field-label">
+                                    <label for="aica_debug_mode"><?php _e('Tryb debugowania', 'ai-chat-assistant'); ?></label>
+                                    <p class="aica-field-description">
+                                        <?php _e('Włącz rejestrowanie zdarzeń w celach diagnostycznych.', 'ai-chat-assistant'); ?>
+                                    </p>
+                                </div>
+                                <div class="aica-field-input">
+                                    <label class="aica-toggle-switch">
+                                        <input type="checkbox" id="aica_debug_mode" name="aica_debug_mode" value="1" <?php checked(aica_get_option('debug_mode', false)); ?> />
+                                        <span class="aica-toggle-slider"></span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -259,7 +296,9 @@ if (!defined('ABSPATH')) {
                 </div>
                 
                 <div class="aica-form-actions">
-                    <input type="submit" name="aica_save_settings" class="button button-primary aica-save-button" value="<?php _e('Zapisz ustawienia', 'ai-chat-assistant'); ?>" />
+                    <button type="submit" name="aica_save_settings" class="button button-primary aica-save-button">
+                        <?php _e('Zapisz ustawienia', 'ai-chat-assistant'); ?>
+                    </button>
                 </div>
             </form>
         </div>
@@ -548,6 +587,52 @@ if (!defined('ABSPATH')) {
     font-size: 14px;
 }
 
+/* Toggle Switch */
+.aica-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.aica-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.aica-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.aica-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .aica-toggle-slider {
+    background-color: var(--aica-primary);
+}
+
+input:checked + .aica-toggle-slider:before {
+    transform: translateX(26px);
+}
+
 /* Tags Input */
 .aica-tags-input-container {
     max-width: 500px;
@@ -624,6 +709,40 @@ if (!defined('ABSPATH')) {
     font-size: 14px !important;
     height: auto !important;
     min-height: 36px;
+}
+
+/* Status indicators for API tests */
+.aica-api-test-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.aica-api-test-result.loading {
+    color: var(--aica-text-light);
+}
+
+.aica-api-test-result.success {
+    color: var(--aica-success);
+}
+
+.aica-api-test-result.error {
+    color: var(--aica-error);
+}
+
+.aica-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top: 2px solid var(--aica-primary);
+    border-radius: 50%;
+    animation: aica-spin 1s linear infinite;
+}
+
+@keyframes aica-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 @media screen and (max-width: 782px) {
@@ -715,7 +834,7 @@ jQuery(document).ready(function($) {
                     exists = true;
                     return false;
                 }
-                });
+            });
             
             if (!exists) {
                 // Dodanie nowego tagu
@@ -750,19 +869,15 @@ jQuery(document).ready(function($) {
         var resultContainer = $('#api-test-result');
         
         // Ukrycie poprzedniego wyniku
-        resultContainer.html('');
-        
-        // Zmiana tekstu przycisku
-        button.html('<span class="dashicons dashicons-update aica-spin"></span> <?php _e('Testowanie...', 'ai-chat-assistant'); ?>');
-        button.prop('disabled', true);
+        resultContainer.removeClass('success error').addClass('loading');
+        resultContainer.html('<span class="aica-spinner"></span> <?php _e('Testowanie...', 'ai-chat-assistant'); ?>');
         
         // Pobranie klucza API
         var apiKey = $('#aica_claude_api_key').val();
         
         if (apiKey === '') {
-            resultContainer.html('<span class="aica-notice-error"><?php _e('Wprowadź klucz API.', 'ai-chat-assistant'); ?></span>');
-            button.html(originalText);
-            button.prop('disabled', false);
+            resultContainer.removeClass('loading').addClass('error');
+            resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wprowadź klucz API.', 'ai-chat-assistant'); ?>');
             return;
         }
         
@@ -771,25 +886,193 @@ jQuery(document).ready(function($) {
             url: ajaxurl,
             type: 'POST',
             data: {
-                action: 'aica_test_claude_api',
-                nonce: '<?php echo wp_create_nonce('aica_settings_nonce'); ?>',
+                action: 'aica_test_api_connection',
+                nonce: $('#aica_settings_nonce').val(),
+                api_type: 'claude',
                 api_key: apiKey
             },
             success: function(response) {
                 if (response.success) {
-                    resultContainer.html('<span class="aica-notice-success"><?php _e('Połączenie z API Claude działa poprawnie.', 'ai-chat-assistant'); ?></span>');
+                    resultContainer.removeClass('loading').addClass('success');
+                    resultContainer.html('<span class="dashicons dashicons-yes-alt"></span> <?php _e('Połączenie z API Claude działa poprawnie.', 'ai-chat-assistant'); ?>');
                 } else {
-                    resultContainer.html('<span class="aica-notice-error">' + response.data.message + '</span>');
+                    resultContainer.removeClass('loading').addClass('error');
+                    resultContainer.html('<span class="dashicons dashicons-no-alt"></span> ' + (response.data.message || '<?php _e('Nie udało się połączyć z API Claude.', 'ai-chat-assistant'); ?>'));
                 }
             },
             error: function() {
-                resultContainer.html('<span class="aica-notice-error"><?php _e('Wystąpił błąd podczas testowania połączenia.', 'ai-chat-assistant'); ?></span>');
-            },
-            complete: function() {
-                button.html(originalText);
-                button.prop('disabled', false);
+                resultContainer.removeClass('loading').addClass('error');
+                resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wystąpił błąd podczas testowania połączenia.', 'ai-chat-assistant'); ?>');
             }
         });
+    });
+    
+    // Testowanie połączenia z API GitHub
+    $('#test-github-api').on('click', function() {
+        var button = $(this);
+        var originalText = button.html();
+        var resultContainer = $('#github-test-result');
+        
+        // Ukrycie poprzedniego wyniku
+        resultContainer.removeClass('success error').addClass('loading');
+        resultContainer.html('<span class="aica-spinner"></span> <?php _e('Testowanie...', 'ai-chat-assistant'); ?>');
+        
+        // Pobranie tokenu
+        var token = $('#aica_github_token').val();
+        
+        if (token === '') {
+            resultContainer.removeClass('loading').addClass('error');
+            resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wprowadź token GitHub.', 'ai-chat-assistant'); ?>');
+            return;
+        }
+        
+        // Wywołanie AJAX do testowania połączenia
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_test_api_connection',
+                nonce: $('#aica_settings_nonce').val(),
+                api_type: 'github',
+                api_key: token
+            },
+            success: function(response) {
+                if (response.success) {
+                    resultContainer.removeClass('loading').addClass('success');
+                    resultContainer.html('<span class="dashicons dashicons-yes-alt"></span> <?php _e('Połączenie z API GitHub działa poprawnie.', 'ai-chat-assistant'); ?>');
+                } else {
+                    resultContainer.removeClass('loading').addClass('error');
+                    resultContainer.html('<span class="dashicons dashicons-no-alt"></span> ' + (response.data.message || '<?php _e('Nie udało się połączyć z API GitHub.', 'ai-chat-assistant'); ?>'));
+                }
+            },
+            error: function() {
+                resultContainer.removeClass('loading').addClass('error');
+                resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wystąpił błąd podczas testowania połączenia.', 'ai-chat-assistant'); ?>');
+            }
+        });
+    });
+    
+    // Testowanie połączenia z API GitLab
+    $('#test-gitlab-api').on('click', function() {
+        var button = $(this);
+        var originalText = button.html();
+        var resultContainer = $('#gitlab-test-result');
+        
+        // Ukrycie poprzedniego wyniku
+        resultContainer.removeClass('success error').addClass('loading');
+        resultContainer.html('<span class="aica-spinner"></span> <?php _e('Testowanie...', 'ai-chat-assistant'); ?>');
+        
+        // Pobranie tokenu
+        var token = $('#aica_gitlab_token').val();
+        
+        if (token === '') {
+            resultContainer.removeClass('loading').addClass('error');
+            resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wprowadź token GitLab.', 'ai-chat-assistant'); ?>');
+            return;
+        }
+        
+        // Wywołanie AJAX do testowania połączenia
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_test_api_connection',
+                nonce: $('#aica_settings_nonce').val(),
+                api_type: 'gitlab',
+                api_key: token
+            },
+            success: function(response) {
+                if (response.success) {
+                    resultContainer.removeClass('loading').addClass('success');
+                    resultContainer.html('<span class="dashicons dashicons-yes-alt"></span> <?php _e('Połączenie z API GitLab działa poprawnie.', 'ai-chat-assistant'); ?>');
+                } else {
+                    resultContainer.removeClass('loading').addClass('error');
+                    resultContainer.html('<span class="dashicons dashicons-no-alt"></span> ' + (response.data.message || '<?php _e('Nie udało się połączyć z API GitLab.', 'ai-chat-assistant'); ?>'));
+                }
+            },
+            error: function() {
+                resultContainer.removeClass('loading').addClass('error');
+                resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wystąpił błąd podczas testowania połączenia.', 'ai-chat-assistant'); ?>');
+            }
+        });
+    });
+    
+    // Testowanie połączenia z API Bitbucket
+    $('#test-bitbucket-api').on('click', function() {
+        var button = $(this);
+        var originalText = button.html();
+        var resultContainer = $('#bitbucket-test-result');
+        
+        // Ukrycie poprzedniego wyniku
+        resultContainer.removeClass('success error').addClass('loading');
+        resultContainer.html('<span class="aica-spinner"></span> <?php _e('Testowanie...', 'ai-chat-assistant'); ?>');
+        
+        // Pobranie danych dostępowych
+        var username = $('#aica_bitbucket_username').val();
+        var password = $('#aica_bitbucket_app_password').val();
+        
+        if (username === '' || password === '') {
+            resultContainer.removeClass('loading').addClass('error');
+            resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wprowadź nazwę użytkownika i hasło aplikacji Bitbucket.', 'ai-chat-assistant'); ?>');
+            return;
+        }
+        
+        // Wywołanie AJAX do testowania połączenia
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_test_api_connection',
+                nonce: $('#aica_settings_nonce').val(),
+                api_type: 'bitbucket',
+                username: username,
+                password: password
+            },
+            success: function(response) {
+                if (response.success) {
+                    resultContainer.removeClass('loading').addClass('success');
+                    resultContainer.html('<span class="dashicons dashicons-yes-alt"></span> <?php _e('Połączenie z API Bitbucket działa poprawnie.', 'ai-chat-assistant'); ?>');
+                } else {
+                    resultContainer.removeClass('loading').addClass('error');
+                    resultContainer.html('<span class="dashicons dashicons-no-alt"></span> ' + (response.data.message || '<?php _e('Nie udało się połączyć z API Bitbucket.', 'ai-chat-assistant'); ?>'));
+                }
+            },
+            error: function() {
+                resultContainer.removeClass('loading').addClass('error');
+                resultContainer.html('<span class="dashicons dashicons-no-alt"></span> <?php _e('Wystąpił błąd podczas testowania połączenia.', 'ai-chat-assistant'); ?>');
+            }
+        });
+    });
+    
+    // Walidacja formularza przed wysłaniem
+    $('#aica-settings-form').on('submit', function(e) {
+        var valid = true;
+        var firstError = null;
+        
+        // Walidacja pól wg aktywnej zakładki
+        var activeTab = $('.aica-tab-content.active').attr('id');
+        
+        if (activeTab === 'claude-settings') {
+            // Walidacja klucza API Claude
+            if ($('#aica_claude_api_key').val().trim() === '') {
+                $('#aica_claude_api_key').addClass('error');
+                valid = false;
+                if (!firstError) firstError = $('#aica_claude_api_key');
+            } else {
+                $('#aica_claude_api_key').removeClass('error');
+            }
+        }
+        
+        // W przypadku błędów, przerwij wysyłanie i przewiń do pierwszego błędu
+        if (!valid) {
+            e.preventDefault();
+            if (firstError) {
+                $('html, body').animate({
+                    scrollTop: firstError.offset().top - 100
+                }, 300);
+                firstError.focus();
+            }
+        }
     });
 });
 </script>

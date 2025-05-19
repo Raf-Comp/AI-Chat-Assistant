@@ -12,7 +12,7 @@ class ChatService {
         $this->db = $wpdb;
         
         // Inicjalizacja klienta Claude
-        $api_key = get_option('aica_claude_api_key', '');
+        $api_key = aica_get_option('claude_api_key', '');
         if (!empty($api_key)) {
             $this->claude_client = new ClaudeClient($api_key);
         }
@@ -23,7 +23,12 @@ class ChatService {
      */
     public function create_session() {
         $session_id = 'sess_' . uniqid() . '_' . wp_generate_password(8, false, false);
-        $user_id = get_current_user_id();
+        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        
+        if (!$user_id) {
+            return false;
+        }
+        
         $title = __('Nowa rozmowa', 'ai-chat-assistant');
         $now = current_time('mysql');
 
@@ -55,8 +60,8 @@ class ChatService {
         }
 
         // Pobranie modelu z ustawień
-        $model = get_option('aica_claude_model', 'claude-3-haiku-20240307');
-        $max_tokens = intval(get_option('aica_max_tokens', 4000));
+        $model = aica_get_option('claude_model', 'claude-3-haiku-20240307');
+        $max_tokens = intval(aica_get_option('max_tokens', 4000));
 
         // Przygotowanie wiadomości z załącznikiem pliku, jeśli istnieje
         $content = $message;
@@ -259,6 +264,41 @@ class ChatService {
         $table = $this->db->prefix . 'aica_sessions';
         $messages_table = $this->db->prefix . 'aica_messages';
         
+        // Sprawdź czy podane user_id jest z naszej tabeli, jeśli nie, pobierz poprawne
+        $is_wp_user_id = $this->db->get_var(
+            $this->db->prepare(
+                "SELECT COUNT(*) FROM $table WHERE user_id = %d",
+                $user_id
+            )
+        ) === '0';
+        
+        if ($is_wp_user_id) {
+            // Konwersja z ID użytkownika WordPress do naszego ID użytkownika
+            $plugin_user_id = aica_get_user_id($user_id);
+            if ($plugin_user_id) {
+                $user_id = $plugin_user_id;
+            } else {
+                // Jeśli użytkownik nie istnieje w naszej tabeli, dodaj go
+                $user_data = get_userdata($user_id);
+                if ($user_data) {
+                    $plugin_user_id = aica_add_user(
+                        $user_id,
+                        $user_data->user_login,
+                        $user_data->user_email,
+                        isset($user_data->roles[0]) ? $user_data->roles[0] : 'subscriber',
+                        current_time('mysql')
+                    );
+                    if ($plugin_user_id) {
+                        $user_id = $plugin_user_id;
+                    } else {
+                        return [];
+                    }
+                } else {
+                    return [];
+                }
+            }
+        }
+        
         // Podstawowe zapytanie
         $query = "SELECT s.session_id, s.title, s.created_at, s.updated_at FROM $table s WHERE s.user_id = %d";
         $params = [$user_id];
@@ -334,7 +374,11 @@ class ChatService {
      * Usunięcie sesji czatu
      */
     public function delete_session($session_id) {
-        $user_id = get_current_user_id();
+        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        
+        if (!$user_id) {
+            return false;
+        }
         
         // Najpierw sprawdź, czy sesja należy do użytkownika
         $table_sessions = $this->db->prefix . 'aica_sessions';

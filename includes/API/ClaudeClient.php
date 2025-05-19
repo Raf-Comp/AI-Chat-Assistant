@@ -89,11 +89,19 @@ class ClaudeClient {
             ])
         ];
 
+        // Zapisanie loga przed wysłaniem żądania
+        aica_log('Wysyłanie żądania do Claude API: ' . json_encode([
+            'model' => $model,
+            'max_tokens' => $max_tokens,
+            'messages_count' => count($cleaned_messages)
+        ]));
+
         // Wysłanie żądania
         $response = wp_remote_post($this->api_url, $args);
 
         // Obsługa błędów
         if (is_wp_error($response)) {
+            aica_log('Błąd Claude API: ' . $response->get_error_message(), 'error');
             return [
                 'success' => false,
                 'message' => $response->get_error_message()
@@ -104,9 +112,11 @@ class ClaudeClient {
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
         if ($status_code < 200 || $status_code >= 300) {
+            $error_message = isset($body['error']['message']) ? $body['error']['message'] : __('Błąd API Claude', 'ai-chat-assistant');
+            aica_log('Błąd Claude API (HTTP ' . $status_code . '): ' . $error_message, 'error');
             return [
                 'success' => false,
-                'message' => isset($body['error']['message']) ? $body['error']['message'] : __('Błąd API Claude', 'ai-chat-assistant'),
+                'message' => $error_message,
                 'status_code' => $status_code
             ];
         }
@@ -114,6 +124,8 @@ class ClaudeClient {
         // Ekstrakcja odpowiedzi
         $assistant_message = isset($body['content'][0]['text']) ? $body['content'][0]['text'] : '';
         $tokens_used = isset($body['usage']['output_tokens']) ? $body['usage']['output_tokens'] : 0;
+
+        aica_log('Odpowiedź Claude API: Otrzymano ' . $tokens_used . ' tokenów');
 
         return [
             'success' => true,
@@ -141,11 +153,13 @@ class ClaudeClient {
         $response = wp_remote_get('https://api.anthropic.com/v1/models', $args);
 
         if (is_wp_error($response)) {
+            aica_log('Błąd pobierania modeli Claude: ' . $response->get_error_message(), 'error');
             return [];
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
         if ($status_code < 200 || $status_code >= 300) {
+            aica_log('Błąd pobierania modeli Claude (HTTP ' . $status_code . ')', 'error');
             return [];
         }
 
@@ -156,6 +170,7 @@ class ClaudeClient {
             foreach ($body['models'] as $model) {
                 $models[$model['id']] = $model['name'];
             }
+            aica_log('Pobrano modele Claude: ' . implode(', ', array_keys($models)));
         }
 
         // Jeśli API nie zwróciło listy modeli, zwróć domyślną listę
@@ -165,6 +180,7 @@ class ClaudeClient {
                 'claude-3-sonnet-20240229' => 'Claude 3 Sonnet',
                 'claude-3-haiku-20240307' => 'Claude 3 Haiku'
             ];
+            aica_log('Używam domyślnej listy modeli Claude', 'warning');
         }
 
         return $models;

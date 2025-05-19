@@ -19,7 +19,7 @@ class RepositoryService {
     public function get_repositories($type = 'github') {
         switch ($type) {
             case 'github':
-                $github_token = get_option('aica_github_token', '');
+                $github_token = aica_get_option('github_token', '');
                 if (empty($github_token)) {
                     return [];
                 }
@@ -28,7 +28,7 @@ class RepositoryService {
                 return $github_client->get_repositories();
                 
             case 'gitlab':
-                $gitlab_token = get_option('aica_gitlab_token', '');
+                $gitlab_token = aica_get_option('gitlab_token', '');
                 if (empty($gitlab_token)) {
                     return [];
                 }
@@ -37,8 +37,8 @@ class RepositoryService {
                 return $gitlab_client->get_repositories();
                 
             case 'bitbucket':
-                $bitbucket_username = get_option('aica_bitbucket_username', '');
-                $bitbucket_app_password = get_option('aica_bitbucket_app_password', '');
+                $bitbucket_username = aica_get_option('bitbucket_username', '');
+                $bitbucket_app_password = aica_get_option('bitbucket_app_password', '');
                 if (empty($bitbucket_username) || empty($bitbucket_app_password)) {
                     return [];
                 }
@@ -55,7 +55,12 @@ class RepositoryService {
      * Zapisanie nowego repozytorium
      */
     public function save_repository($type, $name, $owner, $url, $repo_id = '') {
-        $user_id = get_current_user_id();
+        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        
+        if (!$user_id) {
+            return false;
+        }
+        
         $now = current_time('mysql');
 
         $result = $this->db->insert(
@@ -79,7 +84,11 @@ class RepositoryService {
      * Usunięcie repozytorium
      */
     public function delete_repository($repo_id) {
-        $user_id = get_current_user_id();
+        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        
+        if (!$user_id) {
+            return false;
+        }
 
         $result = $this->db->delete(
             $this->db->prefix . 'aica_repositories',
@@ -97,6 +106,24 @@ class RepositoryService {
      * Pobranie zapisanych repozytoriów użytkownika
      */
     public function get_saved_repositories($user_id) {
+        // Sprawdź czy podane user_id jest z naszej tabeli, jeśli nie, pobierz poprawne
+        $is_wp_user_id = $this->db->get_var(
+            $this->db->prepare(
+                "SELECT COUNT(*) FROM {$this->db->prefix}aica_repositories WHERE user_id = %d",
+                $user_id
+            )
+        ) === '0';
+        
+        if ($is_wp_user_id) {
+            // Konwersja z ID użytkownika WordPress do naszego ID użytkownika
+            $plugin_user_id = aica_get_user_id($user_id);
+            if ($plugin_user_id) {
+                $user_id = $plugin_user_id;
+            } else {
+                return [];
+            }
+        }
+        
         $table = $this->db->prefix . 'aica_repositories';
         
         $results = $this->db->get_results(
@@ -116,10 +143,19 @@ class RepositoryService {
     public function get_file_content($repo_id, $path) {
         // Pobranie informacji o repozytorium
         $table = $this->db->prefix . 'aica_repositories';
+        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        
+        if (!$user_id) {
+            return [
+                'success' => false,
+                'message' => __('Nieautoryzowany dostęp.', 'ai-chat-assistant')
+            ];
+        }
+        
         $repo = $this->db->get_row(
             $this->db->prepare(
                 "SELECT * FROM $table WHERE id = %d AND user_id = %d",
-                $repo_id, get_current_user_id()
+                $repo_id, $user_id
             ),
             ARRAY_A
         );
@@ -134,7 +170,7 @@ class RepositoryService {
         // Pobranie zawartości pliku w zależności od typu repozytorium
         switch ($repo['repo_type']) {
             case 'github':
-                $github_token = get_option('aica_github_token', '');
+                $github_token = aica_get_option('github_token', '');
                 if (empty($github_token)) {
                     return [
                         'success' => false,
@@ -160,7 +196,7 @@ class RepositoryService {
                 ];
                 
             case 'gitlab':
-                $gitlab_token = get_option('aica_gitlab_token', '');
+                $gitlab_token = aica_get_option('gitlab_token', '');
                 if (empty($gitlab_token)) {
                     return [
                         'success' => false,
@@ -185,132 +221,141 @@ class RepositoryService {
                     'language' => $result['language']
                 ];
                 
-           case 'bitbucket':
-               $bitbucket_username = get_option('aica_bitbucket_username', '');
-               $bitbucket_app_password = get_option('aica_bitbucket_app_password', '');
-               if (empty($bitbucket_username) || empty($bitbucket_app_password)) {
-                   return [
-                       'success' => false,
-                       'message' => __('Dane uwierzytelniające Bitbucket nie są skonfigurowane.', 'ai-chat-assistant')
-                   ];
-               }
+            case 'bitbucket':
+                $bitbucket_username = aica_get_option('bitbucket_username', '');
+                $bitbucket_app_password = aica_get_option('bitbucket_app_password', '');
+                if (empty($bitbucket_username) || empty($bitbucket_app_password)) {
+                    return [
+                        'success' => false,
+                        'message' => __('Dane uwierzytelniające Bitbucket nie są skonfigurowane.', 'ai-chat-assistant')
+                    ];
+                }
 
-               $bitbucket_client = new BitbucketClient($bitbucket_username, $bitbucket_app_password);
-               $result = $bitbucket_client->get_file_content($repo['repo_owner'] . '/' . $repo['repo_name'], $path);
+                $bitbucket_client = new BitbucketClient($bitbucket_username, $bitbucket_app_password);
+                $result = $bitbucket_client->get_file_content($repo['repo_owner'] . '/' . $repo['repo_name'], $path);
 
-               if (!$result) {
-                   return [
-                       'success' => false,
-                       'message' => __('Nie udało się pobrać pliku.', 'ai-chat-assistant')
-                   ];
-               }
+                if (!$result) {
+                    return [
+                        'success' => false,
+                        'message' => __('Nie udało się pobrać pliku.', 'ai-chat-assistant')
+                    ];
+                }
 
-               return [
-                   'success' => true,
-                   'content' => $result['content'],
-                   'path' => $path,
-                   'language' => $result['language']
-               ];
-               
-           default:
-               return [
-                   'success' => false,
-                   'message' => __('Nieobsługiwany typ repozytorium.', 'ai-chat-assistant')
-               ];
-       }
-   }
+                return [
+                    'success' => true,
+                    'content' => $result['content'],
+                    'path' => $path,
+                    'language' => $result['language']
+                ];
+                
+            default:
+                return [
+                    'success' => false,
+                    'message' => __('Nieobsługiwany typ repozytorium.', 'ai-chat-assistant')
+                ];
+        }
+    }
 
-   /**
-    * Wyszukiwanie w repozytorium
-    */
-   public function search_repository($repo_id, $query, $ref = null) {
-       // Pobranie informacji o repozytorium
-       $table = $this->db->prefix . 'aica_repositories';
-       $repo = $this->db->get_row(
-           $this->db->prepare(
-               "SELECT * FROM $table WHERE id = %d AND user_id = %d",
-               $repo_id, get_current_user_id()
-           ),
-           ARRAY_A
-       );
+    /**
+     * Wyszukiwanie w repozytorium
+     */
+    public function search_repository($repo_id, $query, $ref = null) {
+        // Pobranie informacji o repozytorium
+        $table = $this->db->prefix . 'aica_repositories';
+        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        
+        if (!$user_id) {
+            return [
+                'success' => false,
+                'message' => __('Nieautoryzowany dostęp.', 'ai-chat-assistant')
+            ];
+        }
+        
+        $repo = $this->db->get_row(
+            $this->db->prepare(
+                "SELECT * FROM $table WHERE id = %d AND user_id = %d",
+                $repo_id, $user_id
+            ),
+            ARRAY_A
+        );
 
-       if (!$repo) {
-           return [
-               'success' => false,
-               'message' => __('Repozytorium nie zostało znalezione.', 'ai-chat-assistant')
-           ];
-       }
+        if (!$repo) {
+            return [
+                'success' => false,
+                'message' => __('Repozytorium nie zostało znalezione.', 'ai-chat-assistant')
+            ];
+        }
 
-       // Jeśli nie podano gałęzi/tagu, użyj domyślnej głównej gałęzi
-       if (empty($ref)) {
-           $ref = ($repo['repo_type'] === 'bitbucket') ? 'master' : 'main';
-       }
+        // Jeśli nie podano gałęzi/tagu, użyj domyślnej głównej gałęzi
+        if (empty($ref)) {
+            $ref = ($repo['repo_type'] === 'bitbucket') ? 'master' : 'main';
+        }
 
-       // Wyszukiwanie w zależności od typu repozytorium
-       switch ($repo['repo_type']) {
-           case 'github':
-               $github_token = get_option('aica_github_token', '');
-               if (empty($github_token)) {
-                   return [
-                       'success' => false,
-                       'message' => __('Token GitHub nie jest skonfigurowany.', 'ai-chat-assistant')
-                   ];
-               }
+        // Wyszukiwanie w zależności od typu repozytorium
+        switch ($repo['repo_type']) {
+            case 'github':
+                $github_token = aica_get_option('github_token', '');
+                if (empty($github_token)) {
+                    return [
+                        'success' => false,
+                        'message' => __('Token GitHub nie jest skonfigurowany.', 'ai-chat-assistant')
+                    ];
+                }
 
-               $github_client = new GitHubClient($github_token);
-               $results = $github_client->search_repository($repo['repo_owner'], $repo['repo_name'], $query, $ref);
+                $github_client = new GitHubClient($github_token);
+                $results = $github_client->search_repository($repo['repo_owner'], $repo['repo_name'], $query, $ref);
 
-               return [
-                   'success' => true,
-                   'results' => $results,
-                   'query' => $query,
-                   'repo_name' => $repo['repo_name']
-               ];
-               
-           case 'gitlab':
-               $gitlab_token = get_option('aica_gitlab_token', '');
-               if (empty($gitlab_token)) {
-                   return [
-                       'success' => false,
-                       'message' => __('Token GitLab nie jest skonfigurowany.', 'ai-chat-assistant')
-                   ];
-               }
+                return [
+                    'success' => true,
+                    'results' => $results,
+                    'query' => $query,
+                    'repo_name' => $repo['repo_name']
+                ];
+                
+            case 'gitlab':
+                $gitlab_token = aica_get_option('gitlab_token', '');
+                if (empty($gitlab_token)) {
+                    return [
+                        'success' => false,
+                        'message' => __('Token GitLab nie jest skonfigurowany.', 'ai-chat-assistant')
+                    ];
+                }
 
-               $gitlab_client = new GitLabClient($gitlab_token);
-               $results = $gitlab_client->search_repository($repo['repo_external_id'], $query, $ref);
+                $gitlab_client = new GitLabClient($gitlab_token);
+                $results = $gitlab_client->search_repository($repo['repo_external_id'], $query, $ref);
 
-               return [
-                   'success' => true,
-                   'results' => $results,
-                   'query' => $query,
-                   'repo_name' => $repo['repo_name']
-               ];
-               
-           case 'bitbucket':
-               $bitbucket_username = get_option('aica_bitbucket_username', '');
-               $bitbucket_app_password = get_option('aica_bitbucket_app_password', '');
-               if (empty($bitbucket_username) || empty($bitbucket_app_password)) {
-                   return [
-                       'success' => false,
-                       'message' => __('Dane uwierzytelniające Bitbucket nie są skonfigurowane.', 'ai-chat-assistant')
-                   ];
-               }
+                return [
+                    'success' => true,
+                    'results' => $results,
+                    'query' => $query,
+                    'repo_name' => $repo['repo_name']
+                ];
+                
+            case 'bitbucket':
+                $bitbucket_username = aica_get_option('bitbucket_username', '');
+                $bitbucket_app_password = aica_get_option('bitbucket_app_password', '');
+                if (empty($bitbucket_username) || empty($bitbucket_app_password)) {
+                    return [
+                        'success' => false,
+                        'message' => __('Dane uwierzytelniające Bitbucket nie są skonfigurowane.', 'ai-chat-assistant')
+                    ];
+                }
 
-               $bitbucket_client = new BitbucketClient($bitbucket_username, $bitbucket_app_password);
-               $results = $bitbucket_client->search_repository($repo['repo_owner'] . '/' . $repo['repo_name'], $query, $ref);
+                $bitbucket_client = new BitbucketClient($bitbucket_username, $bitbucket_app_password);
+                $results = $bitbucket_client->search_repository($repo['repo_owner'] . '/' . $repo['repo_name'], $query, $ref);
 
-               return [
-                   'success' => true,
-                   'results' => $results,
-                   'query' => $query,
-                   'repo_name' => $repo['repo_name']
-               ];
-               
-           default:
-               return [
-                   'success' => false,
-                   'message' => __('Nieobsługiwany typ repozytorium.', 'ai-chat-assistant')
-               ];
-       }
-   }
+                return [
+                    'success' => true,
+                    'results' => $results,
+                    'query' => $query,
+                    'repo_name' => $repo['repo_name']
+                ];
+                
+            default:
+                return [
+                    'success' => false,
+                    'message' => __('Nieobsługiwany typ repozytorium.', 'ai-chat-assistant')
+                ];
+        }
+    }
 }

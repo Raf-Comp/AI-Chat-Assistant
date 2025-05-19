@@ -2085,54 +2085,60 @@ jQuery(document).ready(function($) {
     });
     
     // Obsługa formularzy dodawania repozytoriów - użyj AJAX zamiast zwykłego formularza
-    $(document).on('submit', '.aica-add-repo-form', function(e) {
-        e.preventDefault();
-        
-        const form = $(this);
-        const submitButton = form.find('button[name="aica_add_repository"]');
-        
-        // Dezaktywuj przycisk, aby uniknąć wielokrotnego kliknięcia
-        submitButton.prop('disabled', true);
-        submitButton.html('<span class="dashicons dashicons-update" style="animation: aica-spin 1s linear infinite;"></span> ' + aica_repos.i18n.adding);
-        
-        // Przygotuj dane formularza
-        const formData = new FormData(form[0]);
-        formData.append('action', 'aica_add_repository');
-        formData.append('nonce', aica_repos.nonce);
-        
-        // Wyślij żądanie AJAX
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                // Przywróć przycisk do oryginalnego stanu
-                submitButton.prop('disabled', false);
-                submitButton.html('<span class="dashicons dashicons-plus"></span> ' + aica_repos.i18n.add);
+$(document).on('submit', '.aica-add-repo-form', function(e) {
+    e.preventDefault();
+    
+    const form = $(this);
+    const submitButton = form.find('button[name="aica_add_repository"]');
+    
+    // Dezaktywuj przycisk, aby uniknąć wielokrotnego kliknięcia
+    submitButton.prop('disabled', true);
+    submitButton.html('<span class="dashicons dashicons-update" style="animation: aica-spin 1s linear infinite;"></span> ' + aica_repos.i18n.adding);
+    
+    // Przygotuj dane formularza
+    const formData = new FormData();
+    formData.append('action', 'aica_add_repository');
+    formData.append('nonce', aica_repos.nonce);
+    formData.append('repo_type', form.find('input[name="repo_type"]').val());
+    formData.append('repo_name', form.find('input[name="repo_name"]').val());
+    formData.append('repo_owner', form.find('input[name="repo_owner"]').val());
+    formData.append('repo_url', form.find('input[name="repo_url"]').val());
+    formData.append('repo_external_id', form.find('input[name="repo_external_id"]').val());
+    formData.append('repo_description', form.find('input[name="repo_description"]').val());
+    
+    // Wyślij żądanie AJAX
+    $.ajax({
+        url: ajaxurl,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            // Przywróć przycisk do oryginalnego stanu
+            submitButton.prop('disabled', false);
+            submitButton.html('<span class="dashicons dashicons-plus"></span> ' + aica_repos.i18n.add);
+            
+            if (response.success) {
+                // Pokaż komunikat o sukcesie
+                alert(response.data.message || 'Repozytorium zostało dodane.');
                 
-                if (response.success) {
-                    // Pokaż komunikat o sukcesie
-                    alert(response.data.message);
-                    
-                    // Przełącz na zakładkę zapisanych repozytoriów i odśwież stronę
-                    $('.aica-source-item[data-source="saved"]').trigger('click');
-                    location.reload();
-                } else {
-                    // Pokaż komunikat o błędzie
-                    alert(response.data.message || aica_repos.i18n.add_error);
-                }
-            },
-            error: function() {
-                // Przywróć przycisk do oryginalnego stanu
-                submitButton.prop('disabled', false);
-                submitButton.html('<span class="dashicons dashicons-plus"></span> ' + aica_repos.i18n.add);
-                
+                // Przełącz na zakładkę zapisanych repozytoriów i odśwież stronę
+                $('.aica-source-item[data-source="saved"]').trigger('click');
+                location.reload();
+            } else {
                 // Pokaż komunikat o błędzie
-                alert(aica_repos.i18n.add_error);
+                alert(response.data.message || aica_repos.i18n.add_error);
             }
-        });
+        },
+        error: function() {
+            // Przywróć przycisk do oryginalnego stanu
+            submitButton.prop('disabled', false);
+            submitButton.html('<span class="dashicons dashicons-plus"></span> ' + aica_repos.i18n.add);
+            
+            // Pokaż komunikat o błędzie
+            alert(aica_repos.i18n.add_error);
+        }
     });
+});
 });
 </script>

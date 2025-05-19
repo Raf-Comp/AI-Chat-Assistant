@@ -36,29 +36,77 @@ if (!defined('ABSPATH')) {
             <!-- Karta statusu API -->
 <div class="aica-status-section">
     <div class="aica-status-header">
-        <h3><?php _e('GitLab API', 'ai-chat-assistant'); ?></h3>
-        <button id="test-gitlab-api" class="button button-small aica-button">
+        <h3><?php _e('Claude API', 'ai-chat-assistant'); ?></h3>
+        <button id="test-claude-api" class="button button-small aica-button">
             <span class="dashicons dashicons-update"></span> <?php _e('Test', 'ai-chat-assistant'); ?>
         </button>
     </div>
 
-    <?php if ($gitlab_api_status['valid']): ?>
+    <?php if ($claude_api_status['valid']): ?>
         <div class="aica-status aica-status-success">
             <span class="aica-status-icon dashicons dashicons-yes-alt"></span>
             <div>
-                <p><?php _e('Połączono z API GitLab', 'ai-chat-assistant'); ?></p>
+                <p><?php _e('Połączono z API Claude', 'ai-chat-assistant'); ?></p>
+                <?php if (isset($claude_api_status['details'])): ?>
+                <table class="aica-status-details">
+                    <tr>
+                        <th><?php _e('Wybrany model:', 'ai-chat-assistant'); ?></th>
+                        <td><?php echo esc_html($claude_api_status['details']['current_model']); ?>
+                            <?php if ($claude_api_status['details']['model_available']): ?>
+                                <span class="aica-badge aica-badge-success"><?php _e('Dostępny', 'ai-chat-assistant'); ?></span>
+                            <?php else: ?>
+                                <span class="aica-badge aica-badge-error"><?php _e('Niedostępny', 'ai-chat-assistant'); ?></span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Dostępne modele:', 'ai-chat-assistant'); ?></th>
+                        <td>
+                            <div class="aica-models-list">
+                                <?php foreach ($claude_api_status['details']['models'] as $model): ?>
+                                    <span class="aica-model-badge"><?php echo esc_html($model); ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <?php endif; ?>
             </div>
         </div>
     <?php else: ?>
         <div class="aica-status aica-status-error">
             <span class="aica-status-icon dashicons dashicons-warning"></span>
             <div>
-                <p><?php echo esc_html($gitlab_api_status['message']); ?></p>
+                <p><?php echo esc_html($claude_api_status['message']); ?></p>
             </div>
         </div>
     <?php endif; ?>
 </div>
 
+<div class="aica-status-section">
+    <div class="aica-status-header">
+        <h3><?php _e('GitHub API', 'ai-chat-assistant'); ?></h3>
+        <button id="test-github-api" class="button button-small aica-button">
+            <span class="dashicons dashicons-update"></span> <?php _e('Test', 'ai-chat-assistant'); ?>
+        </button>
+    </div>
+
+    <?php if ($github_api_status['valid']): ?>
+        <div class="aica-status aica-status-success">
+            <span class="aica-status-icon dashicons dashicons-yes-alt"></span>
+            <div>
+                <p><?php _e('Połączono z API GitHub', 'ai-chat-assistant'); ?></p>
+            </div>
+        </div>
+    <?php else: ?>
+        <div class="aica-status aica-status-error">
+            <span class="aica-status-icon dashicons dashicons-warning"></span>
+            <div>
+                <p><?php echo esc_html($github_api_status['message']); ?></p>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
 <div class="aica-status-section">
     <div class="aica-status-header">
         <h3><?php _e('Bitbucket API', 'ai-chat-assistant'); ?></h3>
@@ -843,7 +891,6 @@ if (!defined('ABSPATH')) {
     100% { transform: rotate(360deg); }
 }
 </style>
-
 <script>
 jQuery(document).ready(function($) {
     function showMessage(type, message) {
@@ -858,115 +905,184 @@ jQuery(document).ready(function($) {
 
     // Claude API
     $('#test-claude-api').on('click', function() {
-        var button = $(this), originalText = button.html();
+        var button = $(this);
+        var originalText = button.html();
         button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
-        $.post(ajaxurl, {
-            action: 'aica_verify_plugin',
-            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
-        }, function(response) {
-            response.success ? showMessage('success', 'Połączenie z API Claude działa poprawnie.') :
-                showMessage('error', response.data.message || 'Nie udało się połączyć z API Claude.');
-            location.reload();
-        }).fail(function() {
-            showMessage('error', 'Błąd połączenia z API Claude.');
-        }).always(function() {
-            button.html(originalText).prop('disabled', false);
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_test_api_connection',
+                nonce: aica_diagnostics_nonce,
+                api_type: 'claude'
+            },
+            success: function(response) {
+                if (response.success) {
+                    showMessage('success', response.data.message || 'Połączenie z API Claude działa poprawnie.');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showMessage('error', response.data.message || 'Nie udało się połączyć z API Claude.');
+                    button.html(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                showMessage('error', 'Błąd połączenia z API Claude.');
+                button.html(originalText).prop('disabled', false);
+            }
         });
     });
 
     // GitHub API
     $('#test-github-api').on('click', function() {
-        var button = $(this), originalText = button.html();
+        var button = $(this);
+        var originalText = button.html();
         button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
-        $.post(ajaxurl, {
-            action: 'aica_verify_plugin',
-            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
-        }, function(response) {
-            response.success ? showMessage('success', 'Połączenie z API GitHub działa poprawnie.') :
-                showMessage('error', response.data.message || 'Nie udało się połączyć z API GitHub.');
-            location.reload();
-        }).fail(function() {
-            showMessage('error', 'Błąd połączenia z API GitHub.');
-        }).always(function() {
-            button.html(originalText).prop('disabled', false);
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_test_api_connection',
+                nonce: aica_diagnostics_nonce,
+                api_type: 'github'
+            },
+            success: function(response) {
+                if (response.success) {
+                    showMessage('success', response.data.message || 'Połączenie z API GitHub działa poprawnie.');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showMessage('error', response.data.message || 'Nie udało się połączyć z API GitHub.');
+                    button.html(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                showMessage('error', 'Błąd połączenia z API GitHub.');
+                button.html(originalText).prop('disabled', false);
+            }
         });
     });
 
     // GitLab API
     $('#test-gitlab-api').on('click', function() {
-        var button = $(this), originalText = button.html();
+        var button = $(this);
+        var originalText = button.html();
         button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
-        $.post(ajaxurl, {
-            action: 'aica_test_gitlab_api',
-            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
-        }, function(response) {
-            response.success ? showMessage('success', 'Połączenie z API GitLab działa poprawnie.') :
-                showMessage('error', response.data.message || 'Nie udało się połączyć z API GitLab.');
-            location.reload();
-        }).fail(function() {
-            showMessage('error', 'Błąd połączenia z API GitLab.');
-        }).always(function() {
-            button.html(originalText).prop('disabled', false);
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_test_gitlab_api',
+                nonce: aica_diagnostics_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    showMessage('success', response.data.message || 'Połączenie z API GitLab działa poprawnie.');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showMessage('error', response.data.message || 'Nie udało się połączyć z API GitLab.');
+                    button.html(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                showMessage('error', 'Błąd połączenia z API GitLab.');
+                button.html(originalText).prop('disabled', false);
+            }
         });
     });
 
     // Bitbucket API
     $('#test-bitbucket-api').on('click', function() {
-        var button = $(this), originalText = button.html();
+        var button = $(this);
+        var originalText = button.html();
         button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
-        $.post(ajaxurl, {
-            action: 'aica_test_bitbucket_api',
-            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
-        }, function(response) {
-            response.success ? showMessage('success', 'Połączenie z API Bitbucket działa poprawnie.') :
-                showMessage('error', response.data.message || 'Nie udało się połączyć z API Bitbucket.');
-            location.reload();
-        }).fail(function() {
-            showMessage('error', 'Błąd połączenia z API Bitbucket.');
-        }).always(function() {
-            button.html(originalText).prop('disabled', false);
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_test_bitbucket_api',
+                nonce: aica_diagnostics_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    showMessage('success', response.data.message || 'Połączenie z API Bitbucket działa poprawnie.');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showMessage('error', response.data.message || 'Nie udało się połączyć z API Bitbucket.');
+                    button.html(originalText).prop('disabled', false);
+                }
+            },
+            error: function() {
+                showMessage('error', 'Błąd połączenia z API Bitbucket.');
+                button.html(originalText).prop('disabled', false);
+            }
         });
     });
 
+    // Testowanie wszystkich API
     $('#test-all-apis').on('click', function() {
-        $('#test-claude-api').trigger('click');
-        setTimeout(() => $('#test-github-api').trigger('click'), 1000);
-        setTimeout(() => $('#test-gitlab-api').trigger('click'), 2000);
-        setTimeout(() => $('#test-bitbucket-api').trigger('click'), 3000);
+        // Sprawdź, czy przyciski dla poszczególnych API istnieją
+        if ($('#test-claude-api').length) {
+            $('#test-claude-api').trigger('click');
+        }
+        
+        setTimeout(function() {
+            if ($('#test-github-api').length) {
+                $('#test-github-api').trigger('click');
+            }
+        }, 1000);
+        
+        setTimeout(function() {
+            if ($('#test-gitlab-api').length) {
+                $('#test-gitlab-api').trigger('click');
+            }
+        }, 2000);
+        
+        setTimeout(function() {
+            if ($('#test-bitbucket-api').length) {
+                $('#test-bitbucket-api').trigger('click');
+            }
+        }, 3000);
     });
-
 
     // Przycisk naprawy bazy danych
     $('#repair-database').on('click', function() {
         var button = $(this);
         var originalText = button.html();
-        button.html('<span class="dashicons dashicons-update aica-spin"></span> <?php _e('Naprawa...', 'ai-chat-assistant'); ?>');
-        button.prop('disabled', true);
+        button.html('<span class="dashicons dashicons-update aica-spin"></span> Naprawa...').prop('disabled', true);
         
         $.ajax({
             url: ajaxurl,
             type: 'POST',
             data: {
                 action: 'aica_repair_database',
-                nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
+                nonce: aica_diagnostics_nonce
             },
             success: function(response) {
                 if (response.success) {
-                    showMessage('success', response.data.message || '<?php _e('Tabele bazy danych zostały pomyślnie naprawione.', 'ai-chat-assistant'); ?>');
+                    showMessage('success', response.data.message || 'Tabele bazy danych zostały pomyślnie naprawione.');
                     // Odśwież stronę, aby zaktualizować informacje
                     setTimeout(function() {
                         location.reload();
                     }, 2000);
                 } else {
-                    showMessage('error', response.data.message || '<?php _e('Nie udało się naprawić tabel bazy danych.', 'ai-chat-assistant'); ?>');
+                    showMessage('error', response.data.message || 'Nie udało się naprawić tabel bazy danych.');
+                    button.html(originalText).prop('disabled', false);
                 }
             },
             error: function() {
-                showMessage('error', '<?php _e('Wystąpił błąd podczas naprawy bazy danych.', 'ai-chat-assistant'); ?>');
-            },
-            complete: function() {
-                button.html(originalText);
-                button.prop('disabled', false);
+                showMessage('error', 'Wystąpił błąd podczas naprawy bazy danych.');
+                button.html(originalText).prop('disabled', false);
             }
         });
     });
@@ -975,20 +1091,19 @@ jQuery(document).ready(function($) {
     $('#refresh-all-diagnostics').on('click', function() {
         var button = $(this);
         var originalText = button.html();
-        button.html('<span class="dashicons dashicons-update aica-spin"></span> <?php _e('Odświeżam...', 'ai-chat-assistant'); ?>');
-        button.prop('disabled', true);
+        button.html('<span class="dashicons dashicons-update aica-spin"></span> Odświeżam...').prop('disabled', true);
         
-        // Symulujemy odświeżenie całej strony
+        // Odśwież całą stronę
         setTimeout(function() {
             location.reload();
-        }, 1000);
+        }, 500);
     });
     
     // Obsługa usuwania sesji
     $('.js-delete-session').on('click', function(e) {
         e.preventDefault();
         
-        if (confirm('<?php _e('Czy na pewno chcesz usunąć tę sesję?', 'ai-chat-assistant'); ?>')) {
+        if (confirm('Czy na pewno chcesz usunąć tę sesję?')) {
             var button = $(this);
             var sessionId = button.data('session-id');
             var sessionElement = button.closest('.aica-chat-session');
@@ -1003,12 +1118,13 @@ jQuery(document).ready(function($) {
                 type: 'POST',
                 data: {
                     action: 'aica_delete_session',
-                    nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>',
+                    nonce: aica_diagnostics_nonce,
+                    nonce_key: 'aica_diagnostics_nonce',
                     session_id: sessionId
                 },
                 success: function(response) {
                     if (response.success) {
-                        showMessage('success', response.data.message || '<?php _e('Sesja została usunięta.', 'ai-chat-assistant'); ?>');
+                        showMessage('success', response.data.message || 'Sesja została usunięta.');
                         
                         // Animacja znikania elementu
                         sessionElement.slideUp(300, function() {
@@ -1022,21 +1138,21 @@ jQuery(document).ready(function($) {
                                         <div class="aica-empty-icon">
                                             <span class="dashicons dashicons-format-chat"></span>
                                         </div>
-                                        <p><?php _e('Brak historii czatu.', 'ai-chat-assistant'); ?></p>
-                                        <p class="aica-empty-desc"><?php _e('Nie przeprowadziłeś jeszcze żadnych rozmów z Claude.', 'ai-chat-assistant'); ?></p>
+                                        <p>Brak historii czatu.</p>
+                                        <p class="aica-empty-desc">Nie przeprowadziłeś jeszcze żadnych rozmów z Claude.</p>
                                     </div>
                                 `);
                             }
                         });
                     } else {
-                        showMessage('error', response.data.message || '<?php _e('Nie udało się usunąć sesji.', 'ai-chat-assistant'); ?>');
+                        showMessage('error', response.data.message || 'Nie udało się usunąć sesji.');
                         sessionElement.css('opacity', '1');
                         button.html('<span class="dashicons dashicons-trash"></span>');
                         button.prop('disabled', false);
                     }
                 },
                 error: function() {
-                    showMessage('error', '<?php _e('Wystąpił błąd podczas usuwania sesji.', 'ai-chat-assistant'); ?>');
+                    showMessage('error', 'Wystąpił błąd podczas usuwania sesji.');
                     sessionElement.css('opacity', '1');
                     button.html('<span class="dashicons dashicons-trash"></span>');
                     button.prop('disabled', false);

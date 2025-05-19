@@ -508,97 +508,97 @@ class Handler {
         exit;
     }
 
-    public function test_gitlab_api() {
-        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
-        }
-
-        $token = get_option('aica_gitlab_token', '');
-        if (empty($token)) {
-            wp_send_json_error(['message' => 'Token GitLab nie jest skonfigurowany.']);
-        }
-
-        $response = wp_remote_get('https://gitlab.com/api/v4/user', [
-            'headers' => ['PRIVATE-TOKEN' => $token],
-            'timeout' => 10
-        ]);
-
-        $code = wp_remote_retrieve_response_code($response);
-        if ($code === 200) {
-            wp_send_json_success(['message' => 'Połączenie z GitLab API działa.']);
-        } else {
-            wp_send_json_error(['message' => 'Błąd połączenia z GitLab API (kod: ' . $code . ').']);
-        }
+    /**
+ * Testowanie połączenia z GitLab API
+ */
+public function test_gitlab_api() {
+    // Weryfikacja nonce
+    if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
+        wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
+        exit;
     }
-
-
-    public function test_bitbucket_api() {
-        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
-        }
-
-        $token = get_option('aica_bitbucket_token', '');
-        if (empty($token)) {
-            wp_send_json_error(['message' => 'Token Bitbucket nie jest skonfigurowany.']);
-        }
-
-        $response = wp_remote_get('https://api.bitbucket.org/2.0/user', [
-            'headers' => ['Authorization' => 'Bearer ' . $token],
-            'timeout' => 10
-        ]);
-
-        $code = wp_remote_retrieve_response_code($response);
-        if ($code === 200) {
-            wp_send_json_success(['message' => 'Połączenie z Bitbucket API działa.']);
-        } else {
-            wp_send_json_error(['message' => 'Błąd połączenia z Bitbucket API (kod: ' . $code . ').']);
-        }
+    
+    $token = aica_get_option('gitlab_token', '');
+    if (empty($token)) {
+        wp_send_json_error(['message' => __('Token GitLab nie jest skonfigurowany.', 'ai-chat-assistant')]);
+        exit;
     }
+    
+    $response = wp_remote_get('https://gitlab.com/api/v4/user', [
+        'headers' => ['PRIVATE-TOKEN' => $token],
+        'timeout' => 10
+    ]);
+    
+    $code = wp_remote_retrieve_response_code($response);
+    if ($code === 200) {
+        wp_send_json_success(['message' => __('Połączenie z GitLab API działa poprawnie.', 'ai-chat-assistant')]);
+    } else {
+        wp_send_json_error(['message' => __('Błąd połączenia z GitLab API (kod: ' . $code . ').', 'ai-chat-assistant')]);
+    }
+    exit;
+}
+
+/**
+ * Testowanie połączenia z Bitbucket API
+ */
+public function test_bitbucket_api() {
+    // Weryfikacja nonce
+    if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
+        wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
+        exit;
+    }
+    
+    $username = aica_get_option('bitbucket_username', '');
+    $app_password = aica_get_option('bitbucket_app_password', '');
+    
+    if (empty($username) || empty($app_password)) {
+        wp_send_json_error(['message' => __('Dane dostępowe Bitbucket nie są skonfigurowane.', 'ai-chat-assistant')]);
+        exit;
+    }
+    
+    $auth = base64_encode($username . ':' . $app_password);
+    $response = wp_remote_get('https://api.bitbucket.org/2.0/user', [
+        'headers' => ['Authorization' => 'Basic ' . $auth],
+        'timeout' => 10
+    ]);
+    
+    $code = wp_remote_retrieve_response_code($response);
+    if ($code === 200) {
+        wp_send_json_success(['message' => __('Połączenie z Bitbucket API działa poprawnie.', 'ai-chat-assistant')]);
+    } else {
+        wp_send_json_error(['message' => __('Błąd połączenia z Bitbucket API (kod: ' . $code . ').', 'ai-chat-assistant')]);
+    }
+    exit;
+}
+
+/**
+ * Naprawa bazy danych
+ */
+public function repair_database() {
+    // Weryfikacja nonce
+    if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
+        wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
+        exit;
+    }
+    
+    // Sprawdź uprawnienia
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => __('Nie masz wystarczających uprawnień do wykonania tej operacji.', 'ai-chat-assistant')]);
+        exit;
+    }
+    
+    // Uruchom instalację tabel
+    $installer = new \AICA\Installer();
+    $result = $installer->create_tables();
+    
+    if ($result) {
+        wp_send_json_success(['message' => __('Tabele bazy danych zostały pomyślnie naprawione.', 'ai-chat-assistant')]);
+    } else {
+        wp_send_json_error(['message' => __('Nie udało się naprawić tabel bazy danych.', 'ai-chat-assistant')]);
+    }
+    exit;
+}
 	
-    /*public function test_gitlab_api() {
-        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
-        }
 
-        $token = get_option('aica_gitlab_token', '');
-        if (empty($token)) {
-            wp_send_json_error(['message' => 'Token GitLab nie jest skonfigurowany.']);
-        }
-
-        $response = wp_remote_get('https://gitlab.com/api/v4/user', [
-            'headers' => ['PRIVATE-TOKEN' => $token],
-            'timeout' => 10
-        ]);
-
-        $code = wp_remote_retrieve_response_code($response);
-        if ($code === 200) {
-            wp_send_json_success(['message' => 'Połączenie z GitLab API działa.']);
-        } else {
-            wp_send_json_error(['message' => 'Błąd połączenia z GitLab API (kod: ' . $code . ').']);
-        }
-    } 
-
-    public function test_bitbucket_api() {
-        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
-        }
-
-        $token = get_option('aica_bitbucket_token', '');
-        if (empty($token)) {
-            wp_send_json_error(['message' => 'Token Bitbucket nie jest skonfigurowany.']);
-        }
-
-        $response = wp_remote_get('https://api.bitbucket.org/2.0/user', [
-            'headers' => ['Authorization' => 'Bearer ' . $token],
-            'timeout' => 10
-        ]);
-
-        $code = wp_remote_retrieve_response_code($response);
-        if ($code === 200) {
-            wp_send_json_success(['message' => 'Połączenie z Bitbucket API działa.']);
-        } else {
-            wp_send_json_error(['message' => 'Błąd połączenia z Bitbucket API (kod: ' . $code . ').']);
-        }
-    } */
 
 }

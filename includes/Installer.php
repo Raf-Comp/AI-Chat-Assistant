@@ -20,9 +20,15 @@ class Installer {
         // Kod wykonywany podczas deaktywacji
     }
 
-    private function create_tables() {
+    /**
+     * Tworzy tabele bazy danych
+     * 
+     * @return bool Czy operacja się powiodła
+     */
+    public function create_tables() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
+        $error = false;
 
         // Tabela repozytoriów
         $table_repos = $wpdb->prefix . 'aica_repositories';
@@ -34,6 +40,7 @@ class Installer {
             repo_owner varchar(255) NOT NULL,
             repo_url varchar(255) NOT NULL,
             repo_external_id varchar(255) DEFAULT '',
+            repo_description text DEFAULT '',
             created_at datetime NOT NULL,
             PRIMARY KEY  (id),
             KEY user_id (user_id)
@@ -96,11 +103,111 @@ class Installer {
         ) $charset_collate;";
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql_sessions);
-        dbDelta($sql_messages);
-        dbDelta($sql_repos);
-        dbDelta($sql_users);
-        dbDelta($sql_options);
+        
+        try {
+            dbDelta($sql_repos);
+            dbDelta($sql_sessions);
+            dbDelta($sql_messages);
+            dbDelta($sql_users);
+            dbDelta($sql_options);
+        } catch (\Exception $e) {
+            $error = true;
+            if (function_exists('aica_log')) {
+                aica_log('Błąd tworzenia tabel: ' . $e->getMessage(), 'error');
+            }
+        }
+        
+        return !$error;
+    }
+
+    /**
+     * Naprawia tabele bazy danych
+     * 
+     * @return bool Czy operacja się powiodła
+     */
+    public function repair_database() {
+        // Najpierw sprawdź, które tabele istnieją
+        global $wpdb;
+        $tables = $wpdb->get_col("SHOW TABLES");
+        $prefix = $wpdb->prefix . 'aica_';
+        $missing_tables = [];
+        
+        // Lista oczekiwanych tabel
+        $expected_tables = [
+            $wpdb->prefix . 'aica_repositories',
+            $wpdb->prefix . 'aica_sessions',
+            $wpdb->prefix . 'aica_messages',
+            $wpdb->prefix . 'aica_users',
+            $wpdb->prefix . 'aica_options'
+        ];
+        
+        // Sprawdź brakujące tabele
+        foreach ($expected_tables as $table) {
+            if (!in_array($table, $tables)) {
+                $missing_tables[] = $table;
+            }
+        }
+        
+        // Jeśli nie ma brakujących tabel, nie ma potrzeby naprawiać
+        if (empty($missing_tables)) {
+            return true;
+        }
+        
+        // Utwórz brakujące tabele
+        $result = $this->create_tables();
+        
+        // Po utworzeniu tabel, dodaj domyślne opcje jeśli tabela opcji była brakująca
+        if (in_array($wpdb->prefix . 'aica_options', $missing_tables)) {
+            $this->set_default_options();
+        }
+        
+        // Po utworzeniu tabel, dodaj bieżącego użytkownika jeśli tabela użytkowników była brakująca
+        if (in_array($wpdb->prefix . 'aica_users', $missing_tables)) {
+            $this->add_current_user();
+        }
+        
+        // Sprawdź, czy katalog uploads istnieje
+        $this->create_upload_directory();
+        
+        return $result;
+    }
+
+    /**
+     * Sprawdza stan bazy danych
+     * 
+     * @return array Status tabel bazy danych
+     */
+    public function check_database_status() {
+        global $wpdb;
+        $tables = $wpdb->get_col("SHOW TABLES");
+        $status = [];
+        
+        // Lista oczekiwanych tabel
+        $expected_tables = [
+            $wpdb->prefix . 'aica_repositories' => 'Repozytoria',
+            $wpdb->prefix . 'aica_sessions' => 'Sesje',
+            $wpdb->prefix . 'aica_messages' => 'Wiadomości',
+            $wpdb->prefix . 'aica_users' => 'Użytkownicy',
+            $wpdb->prefix . 'aica_options' => 'Opcje'
+        ];
+        
+        // Sprawdź każdą oczekiwaną tabelę
+        foreach ($expected_tables as $table_name => $description) {
+            $exists = in_array($table_name, $tables);
+            $records = 0;
+            
+            if ($exists) {
+                $records = $wpdb->get_var("SELECT COUNT(*) FROM `$table_name`");
+            }
+            
+            $status[$table_name] = [
+                'name' => $description,
+                'exists' => $exists,
+                'records' => (int) $records
+            ];
+        }
+        
+        return $status;
     }
 
     private function set_default_options() {
@@ -130,6 +237,8 @@ class Installer {
             $htaccess_content = "Options -Indexes\nDeny from all";
             file_put_contents($htaccess_file, $htaccess_content);
         }
+        
+        return file_exists($aica_dir);
     }
     
     private function add_current_user() {
@@ -138,26 +247,37 @@ class Installer {
         
         // Jeśli nie jesteśmy zalogowani, przerwij
         if ($current_wp_user_id === 0) {
-            return;
+            return false;
         }
         
         $user_info = get_userdata($current_wp_user_id);
         if ($user_info) {
             $now = current_time('mysql');
             
+            // Sprawdź czy funkcja aica_get_highest_role istnieje
+            $role = function_exists('aica_get_highest_role') 
+                ? aica_get_highest_role($user_info->roles) 
+                : $this->get_highest_role($user_info->roles);
+            
             // Dodaj użytkownika do naszej tabeli
-            aica_add_user(
-                $current_wp_user_id,
-                $user_info->user_login,
-                $user_info->user_email,
-                $this->get_highest_role($user_info->roles),
-                $now
-            );
+            $result = function_exists('aica_add_user') 
+                ? aica_add_user($current_wp_user_id, $user_info->user_login, $user_info->user_email, $role, $now)
+                : false;
+                
+            return $result !== false;
         }
+        
+        return false;
     }
     
+    /**
+     * Pobiera najwyższą rolę użytkownika
+     * 
+     * @param array $roles Tablica ról użytkownika
+     * @return string Najwyższa rola
+     */
     private function get_highest_role($roles) {
-        // Określ hierarchię ról
+        // Hierarchia ról
         $role_hierarchy = [
             'administrator' => 5,
             'editor' => 4,

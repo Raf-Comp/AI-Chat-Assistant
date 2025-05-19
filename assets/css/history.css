@@ -1,54 +1,35 @@
-/**
- * Style dla historii rozmów w AI Chat Assistant
- */
-
-:root {
-    --aica-primary: #2271b1;
-    --aica-primary-light: #72aee6;
-    --aica-primary-dark: #135e96;
-    --aica-success: #00a32a;
-    --aica-success-light: #edfaef;
-    --aica-warning: #dba617;
-    --aica-warning-light: #fcf9e8;
-    --aica-error: #d63638;
-    --aica-error-light: #fcf0f1;
-    --aica-text: #1e1e1e;
-    --aica-text-light: #757575;
-    --aica-border: #e0e0e0;
-    --aica-bg-light: #f9f9f9;
-    --aica-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+/* Styl dla historii rozmów */
+.aica-history-container {
+    display: flex;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-top: 20px;
 }
 
-/* Admin Container */
-.aica-admin-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-}
-
-/* Header */
-.aica-header {
+/* Nagłówek strony */
+.aica-history-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 25px;
-    flex-wrap: wrap;
 }
 
-.aica-header h1 {
+.aica-history-header h1 {
     font-size: 24px;
     font-weight: 600;
     margin: 0;
     padding: 0;
 }
 
-.aica-header-actions {
+.aica-history-actions {
     display: flex;
     gap: 12px;
     align-items: center;
 }
 
-/* Search container */
+/* Kontener wyszukiwania */
 .aica-search-container {
     position: relative;
     max-width: 300px;
@@ -58,7 +39,7 @@
 .aica-search-container input {
     width: 100%;
     padding: 8px 36px 8px 12px;
-    border: 1px solid var(--aica-border);
+    border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
 }
@@ -72,90 +53,145 @@
     border: none;
     cursor: pointer;
     padding: 0 10px;
-    color: var(--aica-text-light);
+    color: #757575;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .aica-search-button:hover {
-    color: var(--aica-primary);
+    color: #2271b1;
 }
 
-/* Filter container */
-.aica-filter-container {
-    position: relative;
-}
-
-.aica-filter-button {
-    display: flex !important;
-    align-items: center;
-    gap: 5px;
-}
-
-.aica-filter-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
+/* Lista rozmów */
+.aica-conversations-list {
     width: 300px;
-    background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    padding: 16px;
-    z-index: 100;
-    margin-top: 5px;
+    border-right: 1px solid #e0e0e0;
+    overflow-y: auto;
+    height: calc(100vh - 200px);
 }
 
-.aica-filter-group {
-    margin-bottom: 15px;
+.aica-conversation-item {
+    padding: 15px;
+    border-bottom: 1px solid #e0e0e0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
-.aica-filter-group h3 {
-    font-size: 14px;
-    margin: 0 0 10px 0;
-    padding: 0;
+.aica-conversation-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.aica-conversation-item.active {
+    background-color: #f0f7ff;
+    border-left: 3px solid #2271b1;
+}
+
+.aica-conversation-title {
     font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.aica-filter-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-size: 13px;
+.aica-conversation-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #757575;
 }
 
-.aica-date-range {
+/* Widok wiadomości */
+.aica-messages-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    height: calc(100vh - 200px);
+}
+
+.aica-message-item {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.aica-message-header {
     display: flex;
     align-items: center;
-    gap: 5px;
+    margin-bottom: 5px;
 }
 
-.aica-date-range input {
-    flex: 1;
-    padding: 6px 8px;
-    border: 1px solid var(--aica-border);
-    border-radius: 4px;
-    font-size: 13px;
+.aica-message-sender {
+    font-weight: 600;
+    font-size: 14px;
+    margin-right: 10px;
 }
 
-.aica-filter-actions {
+.aica-message-time {
+    font-size: 12px;
+    color: #757575;
+}
+
+.aica-message-content {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.aica-message-item.user .aica-message-content {
+    background-color: #f0f7ff;
+}
+
+.aica-message-item.assistant .aica-message-content {
+    background-color: #f9f9f9;
+}
+
+/* Paginacja */
+.aica-pagination {
     display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 15px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
 }
 
-/* Empty state */
+.aica-pagination-info {
+    margin: 0 15px;
+    font-size: 14px;
+    color: #757575;
+}
+
+.aica-pagination-button {
+    padding: 6px 12px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.aica-pagination-button:hover {
+    background-color: #e0e0e0;
+}
+
+.aica-pagination-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Stan pusty */
 .aica-empty-state {
     text-align: center;
     padding: 60px 20px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: var(--aica-card-shadow);
 }
 
 .aica-empty-icon {
     font-size: 48px;
-    color: var(--aica-text-light);
+    color: #757575;
     opacity: 0.5;
     margin-bottom: 15px;
 }
@@ -173,584 +209,14 @@
 }
 
 .aica-empty-state p {
-    color: var(--aica-text-light);
+    color: #757575;
     margin: 0 0 20px 0;
 }
 
-/* History container */
-.aica-history-container {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-/* History Cards */
-.aica-history-card {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: var(--aica-card-shadow);
-    overflow: hidden;
-    transition: box-shadow 0.3s ease;
-}
-
-.aica-history-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.aica-card-header {
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--aica-border);
-}
-
-.aica-card-title {
-    display: flex;
-    flex-direction: column;
-}
-
-.aica-card-title h3 {
-    margin: 0;
-    padding: 0;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.aica-session-id {
-    font-size: 12px;
-    color: var(--aica-text-light);
-    margin-top: 3px;
-}
-
-.aica-card-actions {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.aica-card-expand,
-.aica-dropdown-toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 3px;
-    color: var(--aica-text-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.aica-card-expand:hover,
-.aica-dropdown-toggle:hover {
-    background-color: #f0f0f0;
-    color: var(--aica-text);
-}
-
-/* Dropdown Menu */
-.aica-dropdown {
-    position: relative;
-}
-
-.aica-dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    padding: 8px 0;
-    z-index: 100;
-    display: none;
-    min-width: 200px;
-    margin-top: 5px;
-}
-
-.aica-dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    color: var(--aica-text);
-    text-decoration: none;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
-}
-
-.aica-dropdown-item:hover {
-    background-color: #f0f0f0;
-    color: var(--aica-text);
-}
-
-.aica-dropdown-item .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-}
-
-.aica-dropdown-divider {
-    height: 1px;
-    background-color: var(--aica-border);
-    margin: 6px 0;
-}
-
-.text-danger {
-    color: var(--aica-error);
-}
-
-.text-danger:hover {
-    background-color: var(--aica-error-light);
-    color: var(--aica-error);
-}
-
-/* Card Body */
-.aica-card-body {
-    padding: 15px 20px;
-}
-
-.aica-meta-info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.aica-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--aica-text-light);
-}
-
-.aica-meta-item .dashicons {
-    font-size: 15px;
-    width: 15px;
-    height: 15px;
-}
-
-.aica-conversation-preview {
-    padding: 10px 15px;
-    background-color: var(--aica-bg-light);
-    border-radius: 6px;
-    border-left: 3px solid var(--aica-primary-light);
-}
-
-.aica-message-preview {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.aica-message-preview-label {
-    font-weight: 600;
-    font-size: 13px;
-}
-
-.aica-message-preview-content {
-    font-size: 14px;
-    color: var(--aica-text);
-}
-
-/* Card Footer */
-.aica-card-footer {
-    padding: 15px 20px;
-    border-top: 1px solid var(--aica-border);
-    display: flex;
-    justify-content: flex-end;
-}
-
-.aica-continue-button {
-    display: flex !important;
-    align-items: center;
-    gap: 6px;
-}
-
-.aica-continue-button .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
-}
-
-/* Expanded Card */
-.aica-card-expanded {
-    padding: 20px;
-    border-top: 1px solid var(--aica-border);
-    background-color: var(--aica-bg-light);
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.aica-loading-messages {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 30px 0;
-}
-
-.aica-loading-spinner {
-    border: 3px solid rgba(0, 0, 0, 0.1);
-    border-top: 3px solid var(--aica-primary);
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: aica-spin 1s linear infinite;
-    margin-bottom: 15px;
-}
-
-@keyframes aica-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.aica-messages-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.aica-message {
-    display: flex;
-    gap: 10px;
-}
-
-.aica-message-user {
-    align-self: flex-end;
-    flex-direction: row-reverse;
-    max-width: 80%;
-}
-
-.aica-message-ai {
-    align-self: flex-start;
-    max-width: 80%;
-}
-
-.aica-message-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background-color: var(--aica-bg-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.aica-message-user .aica-message-avatar {
-    background-color: var(--aica-primary-light);
-    color: #fff;
-}
-
-.aica-message-ai .aica-message-avatar {
-    background-color: var(--aica-success-light);
-    color: var(--aica-success);
-}
-
-.aica-message-content {
-    background-color: #fff;
-    padding: 12px 15px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    flex-grow: 1;
-}
-
-.aica-message-user .aica-message-content {
-    background-color: var(--aica-primary-light);
-    color: #fff;
-}
-
-.aica-message-time {
-    font-size: 12px;
-    color: var(--aica-text-light);
-    margin-top: 5px;
-}
-
-.aica-message-user .aica-message-time {
-    text-align: right;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-/* Pagination */
-.aica-pagination {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 25px;
-    padding: 15px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: var(--aica-card-shadow);
-}
-
-.aica-pagination-links {
-    display: flex;
-    gap: 5px;
-    align-items: center;
-}
-
-.aica-page-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 14px;
-    border: 1px solid var(--aica-border);
-    color: var(--aica-text);
-    transition: all 0.2s ease;
-}
-
-.aica-page-link:hover {
-    background-color: #f0f0f0;
-}
-
-.aica-page-link.current {
-    background-color: var(--aica-primary);
-    border-color: var(--aica-primary);
-    color: #fff;
-}
-
-.aica-pagination-info {
-    font-size: 13px;
-    color: var(--aica-text-light);
-}
-
-/* Dialog */
-.aica-dialog {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
-
-.aica-dialog-content {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    width: 100%;
-    max-width: 500px;
-    overflow: hidden;
-}
-
-.aica-dialog-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--aica-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.aica-dialog-header h3 {
-    margin: 0;
-    padding: 0;
-    font-size: 18px;
-    font-weight: 600;
-}
-
-.aica-dialog-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-    color: var(--aica-text-light);
-}
-
-.aica-dialog-body {
-    padding: 20px;
-}
-
-.aica-dialog-footer {
-    padding: 15px 20px;
-    border-top: 1px solid var(--aica-border);
+/* Akcje dla rozmowy */
+.aica-conversation-actions {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-}
-
-/* Loading indicator */
-.aica-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 0;
-}
-
-/* Alert messages */
-.aica-alert-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 300px;
-}
-
-.aica-alert {
-    display: flex;
-    align-items: center;
-    padding: 12px 15px;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-    animation: aica-slide-in 0.3s ease;
-}
-
-@keyframes aica-slide-in {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-.aica-alert-error {
-    border-left: 3px solid var(--aica-error);
-}
-
-.aica-alert-success {
-    border-left: 3px solid var(--aica-success);
-}
-
-.aica-alert .dashicons {
-    margin-right: 10px;
-}
-
-.aica-alert-error .dashicons {
-    color: var(--aica-error);
-}
-
-.aica-alert-success .dashicons {
-    color: var(--aica-success);
-}
-
-.aica-alert-message {
-    flex: 1;
-    font-size: 14px;
-}
-
-.aica-alert-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-    color: var(--aica-text-light);
-    margin-left: 10px;
-}
-
-/* Usuwanie sesji */
-.aica-card-deleting {
-    opacity: 0.5;
-    pointer-events: none;
-}
-
-/* Wyświetlanie błędów */
-.aica-error-message {
-    padding: 12px 15px;
-    background-color: var(--aica-error-light);
-    border-radius: 4px;
-    color: var(--aica-error);
-    font-size: 14px;
-}
-
-/* Brak wiadomości */
-.aica-empty-messages {
-    text-align: center;
-    padding: 30px 0;
-    color: var(--aica-text-light);
-    font-size: 14px;
-}
-
-/* Przyciski "Pokaż więcej" */
-.aica-load-more {
-    display: flex;
-    justify-content: center;
     margin-top: 20px;
-}
-
-/* Media Queries dla responsywności */
-@media screen and (max-width: 782px) {
-    .aica-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-    
-    .aica-header-actions {
-        width: 100%;
-        flex-wrap: wrap;
-    }
-    
-    .aica-search-container {
-        max-width: 100%;
-    }
-    
-    .aica-filter-container {
-        width: 100%;
-    }
-    
-    .aica-filter-button {
-        width: 100%;
-    }
-    
-    .aica-card-title h3 {
-        font-size: 15px;
-    }
-    
-    .aica-message-user,
-    .aica-message-ai {
-        max-width: 90%;
-    }
-    
-    .aica-pagination {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .aica-dialog-content {
-        max-width: 95%;
-        margin: 0 10px;
-    }
-}
-
-@media screen and (max-width: 480px) {
-    .aica-header-actions {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .aica-search-container {
-        width: 100%;
-        max-width: 100%;
-    }
-    
-    .aica-filter-container {
-        width: 100%;
-    }
-    
-    .aica-filter-dropdown {
-        width: calc(100% - 10px);
-        right: 5px;
-    }
-    
-    .aica-message-user,
-    .aica-message-ai {
-        max-width: 100%;
-    }
 }

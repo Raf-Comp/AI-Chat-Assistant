@@ -166,6 +166,20 @@ function aica_get_user_id($wp_user_id = null) {
         $wp_user_id
     ));
     
+    if (!$user_id) {
+        // Jeśli użytkownik nie istnieje w naszej tabeli, dodaj go
+        $user_info = get_userdata($wp_user_id);
+        if ($user_info) {
+            $user_id = aica_add_user(
+                $wp_user_id,
+                $user_info->user_login,
+                $user_info->user_email,
+                !empty($user_info->roles) ? aica_get_highest_role($user_info->roles) : 'subscriber',
+                current_time('mysql')
+            );
+        }
+    }
+    
     return $user_id ? (int) $user_id : false;
 }
 
@@ -230,6 +244,35 @@ function aica_add_user($wp_user_id, $username, $email, $role, $created_at = null
     }
     
     return $wpdb->insert_id;
+}
+
+/**
+ * Określa najwyższą rolę z tablicy ról
+ *
+ * @param array $roles Tablica ról
+ * @return string Najwyższa rola
+ */
+function aica_get_highest_role($roles) {
+    $role_hierarchy = [
+        'administrator' => 5,
+        'editor' => 4,
+        'author' => 3,
+        'contributor' => 2,
+        'subscriber' => 1
+    ];
+    
+    $highest_role = 'subscriber';
+    $highest_rank = 0;
+    
+    foreach ($roles as $role) {
+        $rank = isset($role_hierarchy[$role]) ? $role_hierarchy[$role] : 0;
+        if ($rank > $highest_rank) {
+            $highest_rank = $rank;
+            $highest_role = $role;
+        }
+    }
+    
+    return $highest_role;
 }
 
 /**

@@ -1,0 +1,338 @@
+/* Styl dla kontenera repozytoriów */
+.aica-repositories-container {
+    display: flex;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+/* Sidebar */
+.aica-sidebar {
+    width: 250px;
+    background-color: #f9f9f9;
+    border-right: 1px solid #e0e0e0;
+    padding: 20px 0;
+}
+
+.aica-repo-sources,
+.aica-repo-filters {
+    padding: 0 20px;
+    margin-bottom: 25px;
+}
+
+.aica-repo-sources h3,
+.aica-repo-filters h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 15px 0;
+    padding: 0;
+    text-transform: uppercase;
+    color: #757575;
+}
+
+/* Source List */
+.aica-sources-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.aica-source-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    margin-bottom: 5px;
+}
+
+.aica-source-item:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.aica-source-item.active {
+    background-color: #72aee6;
+    color: #fff;
+}
+
+.aica-source-item .dashicons {
+    margin-right: 10px;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.aica-source-name {
+    flex: 1;
+    font-size: 14px;
+}
+
+.aica-source-count {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 12px;
+    min-width: 25px;
+    text-align: center;
+}
+
+.aica-source-item.active .aica-source-count {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Content */
+.aica-content {
+    flex: 1;
+    padding: 20px;
+    overflow: auto;
+}
+
+.aica-repos-tab {
+    display: none;
+}
+
+.aica-repos-tab.active {
+    display: block;
+}
+
+/* Empty state */
+.aica-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.aica-empty-icon {
+    font-size: 48px;
+    color: #757575;
+    opacity: 0.5;
+    margin-bottom: 15px;
+}
+
+.aica-empty-icon .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.aica-empty-state h2 {
+    font-size: 20px;
+    margin: 0 0 10px 0;
+    padding: 0;
+}
+
+.aica-empty-state p {
+    color: #757575;
+    margin: 0 0 20px 0;
+}
+
+/* Repository Grid */
+.aica-repositories-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+/* Repository Card */
+.aica-repository-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.aica-repository-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.aica-repo-header {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.aica-repo-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    margin-right: 12px;
+}
+
+.aica-repo-icon .dashicons {
+    font-size: 20px;
+    color: #2271b1;
+}
+
+.aica-repo-title {
+    flex: 1;
+}
+
+.aica-repo-title h3 {
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.aica-repo-owner {
+    font-size: 12px;
+    color: #757575;
+}
+
+.aica-repo-actions {
+    margin-left: 10px;
+}
+
+/* Dropdown Menu */
+.aica-dropdown {
+    position: relative;
+}
+
+.aica-dropdown-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 3px;
+    color: #757575;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.aica-dropdown-toggle:hover {
+    background-color: #f0f0f0;
+    color: #1e1e1e;
+}
+
+.aica-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 8px 0;
+    z-index: 100;
+    display: none;
+    min-width: 200px;
+    margin-top: 5px;
+}
+
+.aica-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    color: #1e1e1e;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.aica-dropdown-item:hover {
+    background-color: #f0f0f0;
+    color: #1e1e1e;
+}
+
+.aica-dropdown-item .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.aica-dropdown-divider {
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 6px 0;
+}
+
+.text-danger {
+    color: #d63638;
+}
+
+.text-danger:hover {
+    background-color: #fcf0f1;
+    color: #d63638;
+}
+
+/* File Browser */
+.aica-file-browser-container {
+    display: flex;
+    height: 70vh;
+}
+
+.aica-file-browser-sidebar {
+    width: 300px;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.aica-file-browser-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.aica-repo-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.aica-repo-name {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+/* Animacje i stany */
+.aica-initialized .aica-repository-card {
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.aica-file-match {
+    background-color: rgba(255, 240, 120, 0.3);
+    font-weight: bold;
+}
+
+.aica-card-refreshing {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+@keyframes aica-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Style dla komunikatów */
+.aica-notice {
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.aica-notice-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.aica-notice-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}

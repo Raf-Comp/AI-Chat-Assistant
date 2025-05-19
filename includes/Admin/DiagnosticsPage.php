@@ -15,7 +15,7 @@ class DiagnosticsPage {
     }
 
     private function check_claude_api() {
-        $api_key = get_option('aica_claude_api_key', '');
+        $api_key = aica_get_option('claude_api_key', '');
         if (empty($api_key)) {
             return ['valid' => false, 'message' => __('Klucz API Claude nie jest skonfigurowany.', 'ai-chat-assistant')];
         }
@@ -28,7 +28,7 @@ class DiagnosticsPage {
         }
 
         $models = $claude_client->get_available_models();
-        $current_model = get_option('aica_claude_model', 'claude-3-haiku-20240307');
+        $current_model = aica_get_option('claude_model', 'claude-3-haiku-20240307');
 
         return [
             'valid' => true,
@@ -41,7 +41,7 @@ class DiagnosticsPage {
     }
 
     private function check_github_api() {
-        $token = get_option('aica_github_token', '');
+        $token = aica_get_option('github_token', '');
         if (empty($token)) {
             return ['valid' => false, 'message' => __('Token GitHub nie jest skonfigurowany.', 'ai-chat-assistant')];
         }
@@ -53,7 +53,7 @@ class DiagnosticsPage {
     }
 
     private function check_gitlab_api() {
-        $token = get_option('aica_gitlab_token', '');
+        $token = aica_get_option('gitlab_token', '');
         if (empty($token)) {
             return ['valid' => false, 'message' => __('Token GitLab nie jest skonfigurowany.', 'ai-chat-assistant')];
         }
@@ -71,13 +71,16 @@ class DiagnosticsPage {
     }
 
     private function check_bitbucket_api() {
-        $token = get_option('aica_bitbucket_token', '');
-        if (empty($token)) {
-            return ['valid' => false, 'message' => __('Token Bitbucket nie jest skonfigurowany.', 'ai-chat-assistant')];
+        $username = aica_get_option('bitbucket_username', '');
+        $app_password = aica_get_option('bitbucket_app_password', '');
+        
+        if (empty($username) || empty($app_password)) {
+            return ['valid' => false, 'message' => __('Dane dostępowe Bitbucket nie są skonfigurowane.', 'ai-chat-assistant')];
         }
 
+        $auth = base64_encode($username . ':' . $app_password);
         $response = wp_remote_get('https://api.bitbucket.org/2.0/user', [
-            'headers' => ['Authorization' => 'Bearer ' . $token],
+            'headers' => ['Authorization' => 'Basic ' . $auth],
             'timeout' => 10
         ]);
 
@@ -94,15 +97,29 @@ class DiagnosticsPage {
         $prefix = $wpdb->prefix . 'aica_';
         $status = [];
 
-        foreach ($tables as $table) {
-            if (strpos($table, $prefix) === 0) {
-                $records = $wpdb->get_var("SELECT COUNT(*) FROM `$table`");
-                $status[$table] = [
-                    'name' => str_replace($wpdb->prefix, '', $table),
-                    'exists' => true,
-                    'records' => (int) $records
-                ];
+        // Lista oczekiwanych tabel
+        $expected_tables = [
+            $wpdb->prefix . 'aica_repositories' => 'Repozytoria',
+            $wpdb->prefix . 'aica_sessions' => 'Sesje',
+            $wpdb->prefix . 'aica_messages' => 'Wiadomości',
+            $wpdb->prefix . 'aica_users' => 'Użytkownicy',
+            $wpdb->prefix . 'aica_options' => 'Opcje'
+        ];
+
+        // Sprawdź każdą oczekiwaną tabelę
+        foreach ($expected_tables as $table_name => $description) {
+            $exists = in_array($table_name, $tables);
+            $records = 0;
+            
+            if ($exists) {
+                $records = $wpdb->get_var("SELECT COUNT(*) FROM `$table_name`");
             }
+            
+            $status[$table_name] = [
+                'name' => $description,
+                'exists' => $exists,
+                'records' => (int) $records
+            ];
         }
 
         return $status;
@@ -113,7 +130,9 @@ class DiagnosticsPage {
             AICA_PLUGIN_DIR . 'ai-chat-assistant.php' => __('Plik główny wtyczki', 'ai-chat-assistant'),
             AICA_PLUGIN_DIR . 'includes/Main.php' => __('Klasa główna', 'ai-chat-assistant'),
             AICA_PLUGIN_DIR . 'includes/Installer.php' => __('Instalator', 'ai-chat-assistant'),
-            AICA_PLUGIN_DIR . 'includes/API/ClaudeClient.php' => __('Klient Claude API', 'ai-chat-assistant')
+            AICA_PLUGIN_DIR . 'includes/API/ClaudeClient.php' => __('Klient Claude API', 'ai-chat-assistant'),
+            AICA_PLUGIN_DIR . 'assets/js/repositories.js' => __('Skrypt repozytoriów', 'ai-chat-assistant'),
+            AICA_PLUGIN_DIR . 'assets/css/repositories.css' => __('Style repozytoriów', 'ai-chat-assistant')
         ];
 
         $status = [];
@@ -123,8 +142,8 @@ class DiagnosticsPage {
             $writable = $exists ? is_writable($file) : false;
             $permissions = $exists ? substr(sprintf('%o', fileperms($file)), -4) : '';
 
-            $status[$file] = [
-                'name' => $name,
+            $status[$name] = [
+                'path' => $file,
                 'exists' => $exists,
                 'readable' => $readable,
                 'writable' => $writable,
@@ -138,32 +157,56 @@ class DiagnosticsPage {
     private function get_recommendations($db_status, $files_status, $claude_api, $github_api, $gitlab_api, $bitbucket_api) {
         $recommendations = [];
 
-        if (empty($db_status)) {
-            $recommendations[] = __('Brakuje wymaganych tabel w bazie danych.', 'ai-chat-assistant');
+        // Sprawdzanie stanu bazy danych
+        $missing_tables = 0;
+        foreach ($db_status as $table) {
+            if (!$table['exists']) {
+                $missing_tables++;
+            }
+        }
+        
+        if ($missing_tables > 0) {
+            $recommendations[] = sprintf(
+                __('Brakuje %d z %d wymaganych tabel w bazie danych. Użyj przycisku "Napraw" w sekcji "Status bazy danych".', 'ai-chat-assistant'),
+                $missing_tables,
+                count($db_status)
+            );
         }
 
-        foreach ($files_status as $file => $status) {
-            if (!$status['exists'] || !$status['readable']) {
-                $recommendations[] = __('Plik niedostępny lub nieczytelny: ', 'ai-chat-assistant') . $file;
+        // Sprawdzanie plików
+        foreach ($files_status as $name => $status) {
+            if (!$status['exists']) {
+                $recommendations[] = sprintf(
+                    __('Brakuje pliku: %s (%s)', 'ai-chat-assistant'),
+                    $name,
+                    $status['path']
+                );
+            } elseif (!$status['readable']) {
+                $recommendations[] = sprintf(
+                    __('Brak uprawnień do odczytu pliku: %s (%s)', 'ai-chat-assistant'),
+                    $name,
+                    $status['path']
+                );
             }
         }
 
+        // Sprawdzanie API
         if (!$claude_api['valid']) {
-            $recommendations[] = __('Skonfiguruj poprawnie klucz API Claude.', 'ai-chat-assistant');
-        } elseif (!empty($claude_api['details']) && !$claude_api['details']['model_available']) {
+            $recommendations[] = __('Skonfiguruj poprawnie klucz API Claude w ustawieniach wtyczki.', 'ai-chat-assistant');
+        } elseif (isset($claude_api['details']) && isset($claude_api['details']['model_available']) && !$claude_api['details']['model_available']) {
             $recommendations[] = __('Wybrany model Claude nie jest dostępny. Zmień model w ustawieniach wtyczki.', 'ai-chat-assistant');
         }
 
         if (!$github_api['valid']) {
-            $recommendations[] = __('Skonfiguruj token GitHub.', 'ai-chat-assistant');
+            $recommendations[] = __('Skonfiguruj token GitHub w ustawieniach wtyczki.', 'ai-chat-assistant');
         }
 
         if (!$gitlab_api['valid']) {
-            $recommendations[] = __('Skonfiguruj token GitLab.', 'ai-chat-assistant');
+            $recommendations[] = __('Skonfiguruj token GitLab w ustawieniach wtyczki.', 'ai-chat-assistant');
         }
 
         if (!$bitbucket_api['valid']) {
-            $recommendations[] = __('Skonfiguruj token Bitbucket.', 'ai-chat-assistant');
+            $recommendations[] = __('Skonfiguruj dane dostępowe Bitbucket w ustawieniach wtyczki.', 'ai-chat-assistant');
         }
 
         return $recommendations;

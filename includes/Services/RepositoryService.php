@@ -55,7 +55,7 @@ class RepositoryService {
      * Zapisanie nowego repozytorium
      */
     public function save_repository($type, $name, $owner, $url, $repo_id = '', $description = '') {
-        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        $user_id = aica_get_user_id();
         
         if (!$user_id) {
             return false;
@@ -63,29 +63,55 @@ class RepositoryService {
         
         $now = current_time('mysql');
 
-        $result = $this->db->insert(
-            $this->db->prefix . 'aica_repositories',
-            [
-                'user_id' => $user_id,
-                'repo_type' => $type,
-                'repo_name' => $name,
-                'repo_owner' => $owner,
-                'repo_url' => $url,
-                'repo_external_id' => $repo_id,
-                'repo_description' => $description,
-                'created_at' => $now
-            ],
-            ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+        // Sprawdź czy repozytorium już istnieje
+        $exists = $this->db->get_var(
+            $this->db->prepare(
+                "SELECT id FROM {$this->db->prefix}aica_repositories WHERE user_id = %d AND repo_external_id = %s AND repo_type = %s",
+                $user_id, $repo_id, $type
+            )
         );
 
-        return $result ? $this->db->insert_id : false;
+        if ($exists) {
+            // Aktualizuj istniejące repozytorium
+            $result = $this->db->update(
+                $this->db->prefix . 'aica_repositories',
+                [
+                    'repo_name' => $name,
+                    'repo_owner' => $owner,
+                    'repo_url' => $url,
+                    'repo_description' => $description
+                ],
+                ['id' => $exists],
+                ['%s', '%s', '%s', '%s'],
+                ['%d']
+            );
+            return $exists;
+        } else {
+            // Dodaj nowe repozytorium
+            $result = $this->db->insert(
+                $this->db->prefix . 'aica_repositories',
+                [
+                    'user_id' => $user_id,
+                    'repo_type' => $type,
+                    'repo_name' => $name,
+                    'repo_owner' => $owner,
+                    'repo_url' => $url,
+                    'repo_external_id' => $repo_id,
+                    'repo_description' => $description,
+                    'created_at' => $now
+                ],
+                ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+            );
+
+            return $result ? $this->db->insert_id : false;
+        }
     }
 
     /**
      * Usunięcie repozytorium
      */
     public function delete_repository($repo_id) {
-        $user_id = aica_get_user_id(); // Użycie naszej funkcji zamiast get_current_user_id()
+        $user_id = aica_get_user_id();
         
         if (!$user_id) {
             return false;
@@ -106,26 +132,31 @@ class RepositoryService {
     /**
      * Pobranie zapisanych repozytoriów użytkownika
      */
-    public function get_saved_repositories($user_id) {
-        // Sprawdź czy podane user_id jest z naszej tabeli, jeśli nie, pobierz poprawne
-        $is_wp_user_id = $this->db->get_var(
-            $this->db->prepare(
-                "SELECT COUNT(*) FROM {$this->db->prefix}aica_repositories WHERE user_id = %d",
-                $user_id
-            )
-        ) === '0';
-        
-        if ($is_wp_user_id) {
-            // Konwersja z ID użytkownika WordPress do naszego ID użytkownika
+    public function get_saved_repositories($user_id = null) {
+        if ($user_id === null) {
+            $user_id = aica_get_user_id();
+            if (!$user_id) {
+                return [];
+            }
+        } else {
+            // Sprawdź czy podane user_id jest z naszej tabeli, jeśli nie, pobierz poprawne
             $plugin_user_id = aica_get_user_id($user_id);
             if ($plugin_user_id) {
                 $user_id = $plugin_user_id;
-            } else {
-                return [];
             }
         }
         
         $table = $this->db->prefix . 'aica_repositories';
+        
+        // Sprawdź czy tabela istnieje
+        $table_exists = $this->db->get_var($this->db->prepare(
+            "SHOW TABLES LIKE %s",
+            $table
+        )) === $table;
+        
+        if (!$table_exists) {
+            return [];
+        }
         
         $results = $this->db->get_results(
             $this->db->prepare(
@@ -455,25 +486,4 @@ class RepositoryService {
                 return $default_branches;
         }
     }
-
-    public function addRepository($name, $type, $url, $token = '') {
-        $repositories = get_option('aica_repositories', []);
-
-        foreach ($repositories as $repo) {
-            if ($repo['name'] === $name) {
-                return false;
-            }
-        }
-
-        $repositories[] = [
-            'name'  => $name,
-            'type'  => $type,
-            'url'   => $url,
-            'token' => $token,
-            'added' => current_time('mysql'),
-        ];
-
-        return update_option('aica_repositories', $repositories);
-    }
-
 }

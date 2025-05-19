@@ -43,7 +43,7 @@ class RepositoriesPage {
                 
                 if ($result) {
                     add_action('admin_notices', function() {
-                        echo '<div class="notice notice-success"><p>' . __('Repozytorium zostało dodane.', 'ai-chat-assistant') . '</p></div>';
+                        echo '<div class="notice notice-success is-dismissible"><p>' . __('Repozytorium zostało dodane.', 'ai-chat-assistant') . '</p></div>';
                     });
                     
                     // Przekieruj, aby uniknąć ponownego wysłania formularza po odświeżeniu
@@ -51,7 +51,7 @@ class RepositoriesPage {
                     exit;
                 } else {
                     add_action('admin_notices', function() {
-                        echo '<div class="notice notice-error"><p>' . __('Nie udało się dodać repozytorium.', 'ai-chat-assistant') . '</p></div>';
+                        echo '<div class="notice notice-error is-dismissible"><p>' . __('Nie udało się dodać repozytorium.', 'ai-chat-assistant') . '</p></div>';
                     });
                 }
             }
@@ -64,11 +64,14 @@ class RepositoriesPage {
             
             if ($result) {
                 add_action('admin_notices', function() {
-                    echo '<div class="notice notice-success"><p>' . __('Repozytorium zostało usunięte.', 'ai-chat-assistant') . '</p></div>';
+                    echo '<div class="notice notice-success is-dismissible"><p>' . __('Repozytorium zostało usunięte.', 'ai-chat-assistant') . '</p></div>';
                 });
+                // Przekieruj po usunięciu, aby odświeżyć listę
+                wp_redirect(admin_url('admin.php?page=ai-chat-assistant-repositories&deleted=true'));
+                exit;
             } else {
                 add_action('admin_notices', function() {
-                    echo '<div class="notice notice-error"><p>' . __('Nie udało się usunąć repozytorium.', 'ai-chat-assistant') . '</p></div>';
+                    echo '<div class="notice notice-error is-dismissible"><p>' . __('Nie udało się usunąć repozytorium.', 'ai-chat-assistant') . '</p></div>';
                 });
             }
         }
@@ -98,7 +101,10 @@ class RepositoriesPage {
         $result = $this->repo_service->save_repository($type, $name, $owner, $url, $repo_id, $description);
         
         if ($result) {
-            wp_send_json_success(['message' => __('Repozytorium zostało dodane.', 'ai-chat-assistant'), 'repo_id' => $result]);
+            wp_send_json_success([
+                'message' => __('Repozytorium zostało dodane.', 'ai-chat-assistant'),
+                'repo_id' => $result
+            ]);
         } else {
             wp_send_json_error(['message' => __('Nie udało się dodać repozytorium.', 'ai-chat-assistant')]);
         }

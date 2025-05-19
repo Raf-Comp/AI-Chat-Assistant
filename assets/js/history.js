@@ -15,11 +15,11 @@ jQuery(document).ready(function($) {
     // Ładowanie listy rozmów
     function loadConversations(page = 1, search = '') {
         // Pokaż wskaźnik ładowania
-        $('.aica-conversations-list').addClass('aica-loading');
+        $('.aica-history-container').html('<div class="aica-loading"><div class="aica-loading-spinner"></div><p>' + aica_history.i18n.loading + '</p></div>');
         
         // Przygotuj dane
         const data = {
-            action: 'aica_get_chat_history',
+            action: 'aica_get_sessions_list',
             nonce: aica_history.nonce,
             page: page,
             per_page: itemsPerPage
@@ -37,12 +37,12 @@ jQuery(document).ready(function($) {
             data: data,
             success: function(response) {
                 if (response.success) {
-                    // Ukryj wskaźnik ładowania
-                    $('.aica-conversations-list').removeClass('aica-loading');
+                    // Ukryj wskaźnik ładowania i stwórz kontener
+                    $('.aica-history-container').html('<div class="aica-conversations-list"></div><div class="aica-messages-container"></div>');
                     
                     // Pobierz dane
-                    const conversations = response.data.conversations;
-                    const totalItems = response.data.total;
+                    const conversations = response.data.sessions;
+                    const totalItems = response.data.pagination.total_items;
                     totalPages = Math.ceil(totalItems / itemsPerPage);
                     currentPage = page;
                     
@@ -63,7 +63,7 @@ jQuery(document).ready(function($) {
                     }
                 } else {
                     // Pokaż komunikat o błędzie
-                    $('.aica-conversations-list').html(`
+                    $('.aica-history-container').html(`
                         <div class="aica-empty-state">
                             <div class="aica-empty-icon">
                                 <span class="dashicons dashicons-warning"></span>
@@ -74,11 +74,8 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function() {
-                // Ukryj wskaźnik ładowania
-                $('.aica-conversations-list').removeClass('aica-loading');
-                
                 // Pokaż komunikat o błędzie
-                $('.aica-conversations-list').html(`
+                $('.aica-history-container').html(`
                     <div class="aica-empty-state">
                         <div class="aica-empty-icon">
                             <span class="dashicons dashicons-warning"></span>
@@ -92,9 +89,11 @@ jQuery(document).ready(function($) {
     
     // Wyświetlanie listy rozmów
     function renderConversationsList(conversations, search = '') {
+        const conversationsList = $('.aica-conversations-list');
+        
         if (conversations.length === 0) {
             // Wyświetl komunikat o braku rozmów
-            $('.aica-conversations-list').html(`
+            conversationsList.html(`
                 <div class="aica-empty-state">
                     <div class="aica-empty-icon">
                         <span class="dashicons dashicons-format-chat"></span>
@@ -139,14 +138,14 @@ jQuery(document).ready(function($) {
                     <div class="aica-conversation-title">${title}</div>
                     <div class="aica-conversation-meta">
                         <span class="aica-conversation-date">${timeAgo}</span>
-                        <span class="aica-conversation-messages">${conversation.message_count}</span>
+                        <span class="aica-conversation-messages">${conversation.message_count || 0}</span>
                     </div>
                 </div>
             `;
         }
         
         // Aktualizuj listę rozmów
-        $('.aica-conversations-list').html(html);
+        conversationsList.html(html);
         
         // Dodaj obsługę kliknięcia rozmowy
         $('.aica-conversation-item').on('click', function() {
@@ -189,7 +188,7 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     // Pobierz dane
                     const messages = response.data.messages;
-                    const title = response.data.title;
+                    const title = response.data.title || sessionId;
                     
                     // Generuj widok wiadomości
                     renderConversationMessages(messages, title, sessionId);
@@ -249,12 +248,12 @@ jQuery(document).ready(function($) {
             const message = messages[i];
             
             // Formatowanie daty
-            const createdDate = new Date(message.created_at);
+            const createdDate = new Date(message.time);
             const formattedDate = createdDate.toLocaleString();
             
             // Określenie typu wiadomości
-            const senderClass = message.role === 'user' ? 'user' : 'assistant';
-            const senderName = message.role === 'user' ? aica_history.i18n.user : 'Claude';
+            const senderClass = message.type === 'user' ? 'user' : 'assistant';
+            const senderName = message.type === 'user' ? aica_history.i18n.user : 'Claude';
             
             // Dodaj wiadomość
             html += `
@@ -377,14 +376,14 @@ jQuery(document).ready(function($) {
         // Dodaj obsługę przycisków paginacji
         $('.aica-prev-page').on('click', function() {
             if (currentPage > 1) {
-                const search = $('#aica-search-conversations').val();
+                const search = $('#aica-search-input').val();
                 loadConversations(currentPage - 1, search);
             }
         });
         
         $('.aica-next-page').on('click', function() {
             if (currentPage < totalPages) {
-                const search = $('#aica-search-conversations').val();
+                const search = $('#aica-search-input').val();
                 loadConversations(currentPage + 1, search);
             }
         });
@@ -527,7 +526,7 @@ jQuery(document).ready(function($) {
      */
     
     // Obsługa wyszukiwania
-    $('#aica-search-conversations').on('keyup', function(e) {
+    $('#aica-search-input').on('keyup', function(e) {
         const searchTerm = $(this).val().trim();
         
         // Jeśli wciśnięto Enter
@@ -542,8 +541,8 @@ jQuery(document).ready(function($) {
     });
     
     // Obsługa przycisku wyszukiwania
-    $('.aica-search-button').on('click', function() {
-        const searchTerm = $('#aica-search-conversations').val().trim();
+    $('#aica-search-button').on('click', function() {
+        const searchTerm = $('#aica-search-input').val().trim();
         
         if (searchTerm.length < 3 && searchTerm.length > 0) {
             alert(aica_history.i18n.min_search_length);
@@ -553,10 +552,137 @@ jQuery(document).ready(function($) {
         loadConversations(1, searchTerm);
     });
     
-    // Obsługa przycisku wyjścia z widoku wyszukiwania
-    $('#aica-clear-search').on('click', function() {
-        $('#aica-search-conversations').val('');
+    // Obsługa filtrów
+    $('.aica-filter-button').on('click', function() {
+        $('.aica-filter-dropdown').toggle();
+    });
+    
+    // Obsługa przycisku zastosuj filtry
+    $('.aica-apply-filters').on('click', function() {
+        const sort = $('input[name="sort"]:checked').val();
+        const dateFrom = $('.aica-date-from').val();
+        const dateTo = $('.aica-date-to').val();
+        const search = $('#aica-search-input').val().trim();
+        
+        // Ukryj dropdown
+        $('.aica-filter-dropdown').hide();
+        
+        // Aktualizacja danych filtrów
+        const data = {
+            action: 'aica_get_sessions_list',
+            nonce: aica_history.nonce,
+            page: 1,
+            per_page: itemsPerPage,
+            sort: sort
+        };
+        
+        if (search) {
+            data.search = search;
+        }
+        
+        if (dateFrom) {
+            data.date_from = dateFrom;
+        }
+        
+        if (dateTo) {
+            data.date_to = dateTo;
+        }
+        
+        // Pokaż wskaźnik ładowania
+        $('.aica-history-container').html('<div class="aica-loading"><div class="aica-loading-spinner"></div><p>' + aica_history.i18n.loading + '</p></div>');
+        
+        // Wykonaj nowe zapytanie
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // Ukryj wskaźnik ładowania
+                    $('.aica-loading').remove();
+                    
+                    // Przy pierwszym ładowaniu, utwórz kontener dla historii
+                    if ($('.aica-conversations-list').length === 0 && $('.aica-messages-container').length === 0) {
+                        $('.aica-history-container').html('<div class="aica-conversations-list"></div><div class="aica-messages-container"></div>');
+                    }
+                    
+                    // Pobierz dane
+                    const conversations = response.data.sessions;
+                    const totalItems = response.data.pagination.total_items;
+                    totalPages = Math.ceil(totalItems / itemsPerPage);
+                    currentPage = 1;
+                    
+                    // Aktualizuj paginację
+                    updatePagination(currentPage, totalPages, totalItems);
+                    
+                    // Generuj listę rozmów
+                    renderConversationsList(conversations, search);
+                    
+                    // Resetuj aktywną rozmowę
+                    currentSession = null;
+                    
+                    // Wyczyść widok wiadomości
+                    $('.aica-messages-container').html('');
+                } else {
+                    // Pokaż komunikat o błędzie
+                    $('.aica-history-container').html(`
+                        <div class="aica-empty-state">
+                            <div class="aica-empty-icon">
+                                <span class="dashicons dashicons-warning"></span>
+                            </div>
+                            <p>${response.data.message || aica_history.i18n.load_error}</p>
+                        </div>
+                    `);
+                }
+            },
+            error: function() {
+                // Ukryj wskaźnik ładowania
+                $('.aica-loading').remove();
+                
+                // Pokaż komunikat o błędzie
+                $('.aica-history-container').html(`
+                    <div class="aica-empty-state">
+                        <div class="aica-empty-icon">
+                            <span class="dashicons dashicons-warning"></span>
+                        </div>
+                        <p>${aica_history.i18n.load_error}</p>
+                    </div>
+                `);
+            }
+        });
+    });
+    
+    // Obsługa przycisku reset filtrów
+    $('.aica-reset-filters').on('click', function() {
+        // Reset pól formularza
+        $('input[name="sort"][value="newest"]').prop('checked', true);
+        $('.aica-date-from').val('');
+        $('.aica-date-to').val('');
+        $('#aica-search-input').val('');
+        
+        // Ukryj dropdown
+        $('.aica-filter-dropdown').hide();
+        
+        // Załaduj rozmowy bez filtrów
         loadConversations(1);
+    });
+    
+    // Obsługa dialogu usuwania
+    $('.aica-dialog-confirm').on('click', function() {
+        const sessionId = $('#aica-delete-dialog').data('session-id');
+        $('#aica-delete-dialog').hide();
+        deleteConversation(sessionId);
+    });
+    
+    $('.aica-dialog-cancel, .aica-dialog-close').on('click', function() {
+        $('#aica-delete-dialog').hide();
+    });
+    
+    // Zamykanie dropdown po kliknięciu poza nim
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.aica-filter-container').length) {
+            $('.aica-filter-dropdown').hide();
+        }
     });
     
     // Ładowanie rozmów przy starcie

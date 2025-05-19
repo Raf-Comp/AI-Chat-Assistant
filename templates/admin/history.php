@@ -64,7 +64,7 @@ if (!defined('ABSPATH')) {
     </div>
 
     <!-- Dialog Potwierdzający Usunięcie -->
-    <div id="aica-delete-dialog" class="aica-dialog" style="display: none;">
+    <div id="aica-delete-dialog" class="aica-dialog" style="display: none;" data-session-id="">
         <div class="aica-dialog-content">
             <div class="aica-dialog-header">
                 <h3><?php _e('Potwierdź usunięcie', 'ai-chat-assistant'); ?></h3>
@@ -82,3 +82,8 @@ if (!defined('ABSPATH')) {
         </div>
     </div>
 </div>
+
+<script>
+    // Przekazanie nonce do skryptu
+    var aica_history_nonce = '<?php echo esc_js($history_nonce); ?>';
+</script>

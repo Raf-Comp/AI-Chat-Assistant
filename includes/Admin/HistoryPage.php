@@ -20,6 +20,9 @@ class HistoryPage {
             wp_die(__('Nie masz wystarczających uprawnień, aby uzyskać dostęp do tej strony.', 'ai-chat-assistant'));
         }
 
+        // Przekazanie nonce do szablonu
+        $history_nonce = wp_create_nonce('aica_history_nonce');
+        
         include_once AICA_PLUGIN_DIR . 'templates/admin/history.php';
     }
 
@@ -73,9 +76,12 @@ class HistoryPage {
         
         wp_send_json_success([
             'sessions' => $sessions,
-            'total' => $total_sessions,
-            'total_pages' => $total_pages,
-            'current_page' => $page
+            'pagination' => [
+                'total_items' => $total_sessions,
+                'total_pages' => $total_pages,
+                'current_page' => $page,
+                'per_page' => $per_page
+            ]
         ]);
     }
     
@@ -97,12 +103,22 @@ class HistoryPage {
         }
         
         $session_id = sanitize_text_field($_POST['session_id']);
-        $messages = $this->chat_service->get_messages_by_session_id($session_id);
-        $session_info = $this->chat_service->get_session_by_id($session_id);
+        $session = $this->chat_service->get_session($session_id);
+        
+        if (!$session) {
+            wp_send_json_error(['message' => __('Nie znaleziono sesji.', 'ai-chat-assistant')]);
+            return;
+        }
+        
+        $messages = $this->chat_service->get_all_session_messages($session_id);
         
         wp_send_json_success([
             'messages' => $messages,
-            'session_info' => $session_info
+            'title' => $session->title,
+            'pagination' => [
+                'total_items' => count($messages),
+                'current_page' => 1,
+            ]
         ]);
     }
     
@@ -153,8 +169,8 @@ class HistoryPage {
         $session_id = sanitize_text_field($_POST['session_id']);
         $format = isset($_POST['format']) ? sanitize_text_field($_POST['format']) : 'json';
         
-        $messages = $this->chat_service->get_messages_by_session_id($session_id);
-        $session_info = $this->chat_service->get_session_by_id($session_id);
+        $messages = $this->chat_service->get_all_session_messages($session_id);
+        $session = $this->chat_service->get_session($session_id);
         
         if (empty($messages)) {
             wp_send_json_error(['message' => __('Brak wiadomości do eksportu.', 'ai-chat-assistant')]);
@@ -162,7 +178,7 @@ class HistoryPage {
         }
         
         $export_data = [
-            'session_info' => $session_info,
+            'session' => $session,
             'messages' => $messages,
             'export_date' => current_time('mysql')
         ];
@@ -174,12 +190,12 @@ class HistoryPage {
                 $extension = 'json';
                 break;
             case 'txt':
-                $content = $this->format_conversation_as_text($session_info, $messages);
+                $content = $this->format_conversation_as_text($session, $messages);
                 $mime_type = 'text/plain';
                 $extension = 'txt';
                 break;
             case 'html':
-                $content = $this->format_conversation_as_html($session_info, $messages);
+                $content = $this->format_conversation_as_html($session, $messages);
                 $mime_type = 'text/html';
                 $extension = 'html';
                 break;
@@ -188,7 +204,7 @@ class HistoryPage {
                 return;
         }
         
-        $filename = 'ai-chat-' . sanitize_title($session_info->title) . '-' . date('Y-m-d') . '.' . $extension;
+        $filename = 'ai-chat-' . sanitize_title($session->title) . '-' . date('Y-m-d') . '.' . $extension;
         
         wp_send_json_success([
             'content' => $content,
@@ -228,15 +244,15 @@ class HistoryPage {
     }
     
     // Pomocnicza metoda do formatowania konwersacji jako tekst
-    private function format_conversation_as_text($session_info, $messages) {
-        $output = "Tytuł: " . $session_info->title . "\n";
-        $output .= "Data utworzenia: " . $session_info->created_at . "\n";
-        $output .= "Ostatnia aktualizacja: " . $session_info->updated_at . "\n\n";
+    private function format_conversation_as_text($session, $messages) {
+        $output = "Tytuł: " . $session->title . "\n";
+        $output .= "Data utworzenia: " . $session->created_at . "\n";
+        $output .= "Ostatnia aktualizacja: " . $session->updated_at . "\n\n";
         $output .= "Historia konwersacji:\n\n";
         
         foreach ($messages as $message) {
-            $role = $message->role === 'user' ? 'Użytkownik' : 'Asystent';
-            $output .= "[" . $message->created_at . "] " . $role . ":\n";
+            $role = $message->type === 'user' ? 'Użytkownik' : 'Asystent';
+            $output .= "[" . $message->time . "] " . $role . ":\n";
             $output .= $message->content . "\n\n";
         }
         
@@ -244,12 +260,12 @@ class HistoryPage {
     }
     
     // Pomocnicza metoda do formatowania konwersacji jako HTML
-    private function format_conversation_as_html($session_info, $messages) {
+    private function format_conversation_as_html($session, $messages) {
         $output = '<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Eksport konwersacji: ' . esc_html($session_info->title) . '</title>
+    <title>Eksport konwersacji: ' . esc_html($session->title) . '</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         .session-info { background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
@@ -262,19 +278,19 @@ class HistoryPage {
 </head>
 <body>
     <div class="session-info">
-        <h1>' . esc_html($session_info->title) . '</h1>
-        <p>Data utworzenia: ' . esc_html($session_info->created_at) . '</p>
-        <p>Ostatnia aktualizacja: ' . esc_html($session_info->updated_at) . '</p>
+        <h1>' . esc_html($session->title) . '</h1>
+        <p>Data utworzenia: ' . esc_html($session->created_at) . '</p>
+        <p>Ostatnia aktualizacja: ' . esc_html($session->updated_at) . '</p>
     </div>
     <div class="conversation">';
         
         foreach ($messages as $message) {
-            $role = $message->role === 'user' ? 'Użytkownik' : 'Asystent';
-            $class = $message->role === 'user' ? 'user' : 'assistant';
+            $role = $message->type === 'user' ? 'Użytkownik' : 'Asystent';
+            $class = $message->type === 'user' ? 'user' : 'assistant';
             
             $output .= '
         <div class="message ' . $class . '">
-            <div class="message-time">[' . esc_html($message->created_at) . '] ' . esc_html($role) . ':</div>
+            <div class="message-time">[' . esc_html($message->time) . '] ' . esc_html($role) . ':</div>
             <div class="message-content">' . nl2br(esc_html($message->content)) . '</div>
         </div>';
         }

@@ -335,5 +335,24 @@
                 }
             }
         });
+        
+        // Dodatkowy kod bezpośrednio obsługujący przyciski pokazywania/ukrywania hasła
+        // Ta część jest dodana jako dodatkowe zabezpieczenie, aby przyciski działały nawet 
+        // jeśli wcześniejsza obsługa nie zostanie poprawnie zainicjalizowana
+        $('.aica-toggle-password').each(function() {
+            $(this).on('click', function(e) {
+                e.preventDefault();
+                var input = $(this).siblings('input');
+                var icon = $(this).find('.dashicons');
+                
+                if (input.attr('type') === 'password') {
+                    input.attr('type', 'text');
+                    icon.removeClass('dashicons-visibility').addClass('dashicons-hidden');
+                } else {
+                    input.attr('type', 'password');
+                    icon.removeClass('dashicons-hidden').addClass('dashicons-visibility');
+                }
+            });
+        });
     }
 })(jQuery);

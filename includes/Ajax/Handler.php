@@ -17,10 +17,17 @@ class Handler {
         add_action('wp_ajax_aica_get_chat_history', [$this, 'get_chat_history']);
         add_action('wp_ajax_aica_upload_file', [$this, 'upload_file']);
         add_action('wp_ajax_aica_get_repositories', [$this, 'get_repositories']);
+        add_action('wp_ajax_aica_get_repository_details', [$this, 'get_repository_details']);
+        add_action('wp_ajax_aica_get_repository_files', [$this, 'get_repository_files']);
+        add_action('wp_ajax_aica_refresh_repository', [$this, 'refresh_repository']);
         add_action('wp_ajax_aica_get_file_content', [$this, 'get_file_content']);
         add_action('wp_ajax_aica_search_repository', [$this, 'search_repository']);
         add_action('wp_ajax_aica_delete_session', [$this, 'delete_session']);
+        add_action('wp_ajax_aica_delete_repository', [$this, 'delete_repository']);
         add_action('wp_ajax_aica_test_api_connection', [$this, 'test_api_connection']);
+        add_action('wp_ajax_aica_test_gitlab_api', [$this, 'test_gitlab_api']);
+        add_action('wp_ajax_aica_test_bitbucket_api', [$this, 'test_bitbucket_api']);
+
         
         // Obsługa zapisu ustawień
         add_action('admin_post_save_aica_settings', [$this, 'save_settings']);
@@ -298,6 +305,94 @@ class Handler {
         exit;
     }
 
+    /**
+     * Pobieranie szczegółów repozytorium
+     */
+    public function get_repository_details() {
+        // Weryfikacja nonce
+        if (!check_ajax_referer('aica_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Walidacja parametrów
+        $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
+        
+        if (empty($repo_id)) {
+            wp_send_json_error(['message' => __('Brakujący identyfikator repozytorium.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Pobranie szczegółów repozytorium
+        $repo_service = new RepositoryService();
+        $repository = $repo_service->get_repository($repo_id);
+
+        if ($repository) {
+            wp_send_json_success(['repository' => $repository]);
+        } else {
+            wp_send_json_error(['message' => __('Nie znaleziono repozytorium.', 'ai-chat-assistant')]);
+        }
+        exit;
+    }
+
+    /**
+     * Pobieranie plików z repozytorium
+     */
+    public function get_repository_files() {
+        // Weryfikacja nonce
+        if (!check_ajax_referer('aica_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Walidacja parametrów
+        $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
+        $path = isset($_POST['path']) ? sanitize_text_field($_POST['path']) : '';
+        $branch = isset($_POST['branch']) ? sanitize_text_field($_POST['branch']) : 'main';
+        
+        if (empty($repo_id)) {
+            wp_send_json_error(['message' => __('Brakujący identyfikator repozytorium.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Pobranie plików
+        $repo_service = new RepositoryService();
+        $files = $repo_service->get_repository_files($repo_id, $path, $branch);
+
+        wp_send_json_success(['files' => $files]);
+        exit;
+    }
+
+    /**
+     * Odświeżanie metadanych repozytorium
+     */
+    public function refresh_repository() {
+        // Weryfikacja nonce
+        if (!check_ajax_referer('aica_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Walidacja parametrów
+        $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
+        
+        if (empty($repo_id)) {
+            wp_send_json_error(['message' => __('Brakujący identyfikator repozytorium.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Odświeżanie metadanych
+        $repo_service = new RepositoryService();
+        $result = $repo_service->refresh_repository($repo_id);
+
+        if ($result) {
+            wp_send_json_success(['message' => __('Metadane repozytorium zostały odświeżone.', 'ai-chat-assistant')]);
+        } else {
+            wp_send_json_error(['message' => __('Nie udało się odświeżyć metadanych repozytorium.', 'ai-chat-assistant')]);
+        }
+        exit;
+    }
+
     public function get_file_content() {
         // Weryfikacja nonce
         if (!check_ajax_referer('aica_nonce', 'nonce', false)) {
@@ -382,4 +477,128 @@ class Handler {
         }
         exit;
     }
+
+    /**
+     * Usuwanie repozytorium
+     */
+    public function delete_repository() {
+        // Weryfikacja nonce
+        if (!check_ajax_referer('aica_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Nieprawidłowy token bezpieczeństwa.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Walidacja parametrów
+        $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
+        
+        if (empty($repo_id)) {
+            wp_send_json_error(['message' => __('Brakujący identyfikator repozytorium.', 'ai-chat-assistant')]);
+            exit;
+        }
+
+        // Usunięcie repozytorium
+        $repo_service = new RepositoryService();
+        $result = $repo_service->delete_repository($repo_id);
+
+        if ($result) {
+            wp_send_json_success(['message' => __('Repozytorium zostało usunięte.', 'ai-chat-assistant')]);
+        } else {
+            wp_send_json_error(['message' => __('Nie udało się usunąć repozytorium.', 'ai-chat-assistant')]);
+        }
+        exit;
+    }
+
+    public function test_gitlab_api() {
+        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
+        }
+
+        $token = get_option('aica_gitlab_token', '');
+        if (empty($token)) {
+            wp_send_json_error(['message' => 'Token GitLab nie jest skonfigurowany.']);
+        }
+
+        $response = wp_remote_get('https://gitlab.com/api/v4/user', [
+            'headers' => ['PRIVATE-TOKEN' => $token],
+            'timeout' => 10
+        ]);
+
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code === 200) {
+            wp_send_json_success(['message' => 'Połączenie z GitLab API działa.']);
+        } else {
+            wp_send_json_error(['message' => 'Błąd połączenia z GitLab API (kod: ' . $code . ').']);
+        }
+    }
+
+
+    public function test_bitbucket_api() {
+        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
+        }
+
+        $token = get_option('aica_bitbucket_token', '');
+        if (empty($token)) {
+            wp_send_json_error(['message' => 'Token Bitbucket nie jest skonfigurowany.']);
+        }
+
+        $response = wp_remote_get('https://api.bitbucket.org/2.0/user', [
+            'headers' => ['Authorization' => 'Bearer ' . $token],
+            'timeout' => 10
+        ]);
+
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code === 200) {
+            wp_send_json_success(['message' => 'Połączenie z Bitbucket API działa.']);
+        } else {
+            wp_send_json_error(['message' => 'Błąd połączenia z Bitbucket API (kod: ' . $code . ').']);
+        }
+    }
+	
+    /*public function test_gitlab_api() {
+        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
+        }
+
+        $token = get_option('aica_gitlab_token', '');
+        if (empty($token)) {
+            wp_send_json_error(['message' => 'Token GitLab nie jest skonfigurowany.']);
+        }
+
+        $response = wp_remote_get('https://gitlab.com/api/v4/user', [
+            'headers' => ['PRIVATE-TOKEN' => $token],
+            'timeout' => 10
+        ]);
+
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code === 200) {
+            wp_send_json_success(['message' => 'Połączenie z GitLab API działa.']);
+        } else {
+            wp_send_json_error(['message' => 'Błąd połączenia z GitLab API (kod: ' . $code . ').']);
+        }
+    } 
+
+    public function test_bitbucket_api() {
+        if (!check_ajax_referer('aica_diagnostics_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => 'Błąd bezpieczeństwa.']);
+        }
+
+        $token = get_option('aica_bitbucket_token', '');
+        if (empty($token)) {
+            wp_send_json_error(['message' => 'Token Bitbucket nie jest skonfigurowany.']);
+        }
+
+        $response = wp_remote_get('https://api.bitbucket.org/2.0/user', [
+            'headers' => ['Authorization' => 'Bearer ' . $token],
+            'timeout' => 10
+        ]);
+
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code === 200) {
+            wp_send_json_success(['message' => 'Połączenie z Bitbucket API działa.']);
+        } else {
+            wp_send_json_error(['message' => 'Błąd połączenia z Bitbucket API (kod: ' . $code . ').']);
+        }
+    } */
+
 }

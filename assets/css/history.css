@@ -103,7 +103,6 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     padding: 16px;
     z-index: 100;
-    display: none;
     margin-top: 5px;
 }
 
@@ -579,24 +578,35 @@
     gap: 10px;
 }
 
-/* Alerts */
+/* Loading indicator */
+.aica-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 0;
+}
+
+/* Alert messages */
 .aica-alert-container {
     position: fixed;
-    top: 20px;
+    bottom: 20px;
     right: 20px;
-    width: 300px;
     z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 300px;
 }
 
 .aica-alert {
-    margin-bottom: 10px;
-    padding: 12px 16px;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
-    gap: 10px;
-    animation: aica-slide-in 0.3s ease forwards;
+    padding: 12px 15px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    animation: aica-slide-in 0.3s ease;
 }
 
 @keyframes aica-slide-in {
@@ -610,14 +620,24 @@
     }
 }
 
-.aica-alert-success {
-    background-color: var(--aica-success-light);
-    border-left: 4px solid var(--aica-success);
+.aica-alert-error {
+    border-left: 3px solid var(--aica-error);
 }
 
-.aica-alert-error {
-    background-color: var(--aica-error-light);
-    border-left: 4px solid var(--aica-error);
+.aica-alert-success {
+    border-left: 3px solid var(--aica-success);
+}
+
+.aica-alert .dashicons {
+    margin-right: 10px;
+}
+
+.aica-alert-error .dashicons {
+    color: var(--aica-error);
+}
+
+.aica-alert-success .dashicons {
+    color: var(--aica-success);
 }
 
 .aica-alert-message {
@@ -629,29 +649,42 @@
     background: none;
     border: none;
     cursor: pointer;
+    padding: 5px;
     color: var(--aica-text-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    font-size: 16px;
+    margin-left: 10px;
 }
 
-/* Loading Indicator */
-.aica-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 0;
+/* Usuwanie sesji */
+.aica-card-deleting {
+    opacity: 0.5;
+    pointer-events: none;
 }
 
-.aica-loading p {
-    margin-top: 15px;
+/* Wyświetlanie błędów */
+.aica-error-message {
+    padding: 12px 15px;
+    background-color: var(--aica-error-light);
+    border-radius: 4px;
+    color: var(--aica-error);
+    font-size: 14px;
+}
+
+/* Brak wiadomości */
+.aica-empty-messages {
+    text-align: center;
+    padding: 30px 0;
     color: var(--aica-text-light);
+    font-size: 14px;
 }
 
-/* Responsywność */
+/* Przyciski "Pokaż więcej" */
+.aica-load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Media Queries dla responsywności */
 @media screen and (max-width: 782px) {
     .aica-header {
         flex-direction: column;
@@ -668,6 +701,14 @@
         max-width: 100%;
     }
     
+    .aica-filter-container {
+        width: 100%;
+    }
+    
+    .aica-filter-button {
+        width: 100%;
+    }
+    
     .aica-card-title h3 {
         font-size: 15px;
     }
@@ -681,57 +722,35 @@
         flex-direction: column;
         gap: 15px;
     }
+    
+    .aica-dialog-content {
+        max-width: 95%;
+        margin: 0 10px;
+    }
 }
 
-/* Dodatkowe style dla trybu ciemnego (jeśli będzie potrzebny) */
-body.aica-dark-mode .aica-history-card {
-    background-color: #2c3338;
-    color: #f0f0f1;
-}
-
-body.aica-dark-mode .aica-card-header,
-body.aica-dark-mode .aica-card-footer {
-    border-color: #3c434a;
-}
-
-body.aica-dark-mode .aica-session-id,
-body.aica-dark-mode .aica-meta-item {
-    color: #a7aaad;
-}
-
-body.aica-dark-mode .aica-conversation-preview {
-    background-color: #3c434a;
-}
-
-body.aica-dark-mode .aica-message-preview-content {
-    color: #f0f0f1;
-}
-
-body.aica-dark-mode .aica-card-expanded {
-    background-color: #2c3338;
-}
-
-body.aica-dark-mode .aica-message-content {
-    background-color: #3c434a;
-    color: #f0f0f1;
-}
-
-body.aica-dark-mode .aica-message-user .aica-message-content {
-    background-color: var(--aica-primary-dark);
-}
-
-body.aica-dark-mode .aica-pagination,
-body.aica-dark-mode .aica-empty-state,
-body.aica-dark-mode .aica-dialog-content {
-    background-color: #2c3338;
-}
-
-body.aica-dark-mode .aica-page-link {
-    background-color: #3c434a;
-    border-color: #2c3338;
-    color: #f0f0f1;
-}
-
-body.aica-dark-mode .aica-page-link:hover {
-    background-color: #4f5b66;
+@media screen and (max-width: 480px) {
+    .aica-header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .aica-search-container {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .aica-filter-container {
+        width: 100%;
+    }
+    
+    .aica-filter-dropdown {
+        width: calc(100% - 10px);
+        right: 5px;
+    }
+    
+    .aica-message-user,
+    .aica-message-ai {
+        max-width: 100%;
+    }
 }

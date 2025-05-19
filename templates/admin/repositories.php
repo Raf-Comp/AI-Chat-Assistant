@@ -281,7 +281,7 @@ if (!defined('ABSPATH')) {
                                 </div>
                             </div>
                             <div class="aica-repo-footer">
-                                <form method="post" action="">
+                                <form method="post" action="" class="aica-add-repo-form">
                                     <?php wp_nonce_field('aica_repository_nonce'); ?>
                                     <input type="hidden" name="repo_type" value="github">
                                     <input type="hidden" name="repo_name" value="<?php echo esc_attr($repo['name']); ?>">
@@ -361,7 +361,7 @@ if (!defined('ABSPATH')) {
                                 </div>
                             </div>
                             <div class="aica-repo-footer">
-                                <form method="post" action="">
+                                <form method="post" action="" class="aica-add-repo-form">
                                     <?php wp_nonce_field('aica_repository_nonce'); ?>
                                     <input type="hidden" name="repo_type" value="gitlab">
                                     <input type="hidden" name="repo_name" value="<?php echo esc_attr($repo['name']); ?>">
@@ -441,7 +441,7 @@ if (!defined('ABSPATH')) {
                                 </div>
                             </div>
                             <div class="aica-repo-footer">
-                                <form method="post" action="">
+                                <form method="post" action="" class="aica-add-repo-form">
                                     <?php wp_nonce_field('aica_repository_nonce'); ?>
                                     <input type="hidden" name="repo_type" value="bitbucket">
                                     <input type="hidden" name="repo_name" value="<?php echo esc_attr($repo['name']); ?>">
@@ -1472,18 +1472,32 @@ jQuery(document).ready(function($) {
         });
     });
     
-    // Sortowanie repozytoriów
+   // Sortowanie repozytoriów
     $('.aica-sort-select').on('change', function() {
         const sortValue = $(this).val();
         const activeTab = $('.aica-repos-tab.active');
+        const repoGrid = activeTab.find('.aica-repositories-grid');
         const repoCards = activeTab.find('.aica-repository-card').toArray();
         
         // Sortowanie kart repozytoriów
         repoCards.sort(function(a, b) {
-            const aName = $(a).find('.aica-repo-title h3').text();
-            const bName = $(b).find('.aica-repo-title h3').text();
-            const aDate = $(a).find('.aica-meta-value:contains("Dodano")').next().text();
-            const bDate = $(b).find('.aica-meta-value:contains("Dodano")').next().text();
+            const aName = $(a).find('.aica-repo-title h3').text().toLowerCase();
+            const bName = $(b).find('.aica-repo-title h3').text().toLowerCase();
+            
+            // Pobieranie daty dla różnych typów zakładek
+            let aDate, bDate;
+            
+            if (activeTab.attr('id') === 'saved-repositories') {
+                aDate = $(a).find('.aica-meta-item:contains("Dodano:")').find('.aica-meta-value').text();
+                bDate = $(b).find('.aica-meta-item:contains("Dodano:")').find('.aica-meta-value').text();
+            } else {
+                aDate = $(a).find('.aica-meta-item:contains("Aktualizacja:")').find('.aica-meta-value').text();
+                bDate = $(b).find('.aica-meta-item:contains("Aktualizacja:")').find('.aica-meta-value').text();
+            }
+            
+            // Konwersja dat na format porównywalny
+            const aDateObj = aDate ? new Date(aDate.split('.').reverse().join('-')) : new Date(0);
+            const bDateObj = bDate ? new Date(bDate.split('.').reverse().join('-')) : new Date(0);
             
             switch (sortValue) {
                 case 'name_asc':
@@ -1491,17 +1505,18 @@ jQuery(document).ready(function($) {
                 case 'name_desc':
                     return bName.localeCompare(aName);
                 case 'date_desc':
-                    return new Date(bDate) - new Date(aDate);
+                    return bDateObj > aDateObj ? -1 : bDateObj < aDateObj ? 1 : 0;
                 case 'date_asc':
-                    return new Date(aDate) - new Date(bDate);
+                    return aDateObj > bDateObj ? -1 : aDateObj < bDateObj ? 1 : 0;
                 default:
                     return 0;
             }
         });
         
-        // Dodaj posortowane karty z powrotem do kontenera
-        const repoGrid = activeTab.find('.aica-repositories-grid');
+        // Wyczyść siatkę repozytoriów
         repoGrid.empty();
+        
+        // Dodaj posortowane karty z powrotem do kontenera
         $.each(repoCards, function(index, card) {
             repoGrid.append(card);
         });
@@ -1610,6 +1625,32 @@ jQuery(document).ready(function($) {
                     }
                     $('.aica-repo-icon .dashicons').attr('class', 'dashicons ' + iconClass);
                     
+                    // Załaduj listę gałęzi
+                    const branchSelect = $('#aica-branch-select');
+                    branchSelect.empty();
+                    
+                    if (response.data.branches && response.data.branches.length > 0) {
+                        $.each(response.data.branches, function(index, branch) {
+                            branchSelect.append($('<option>', {
+                                value: branch,
+                                text: branch
+                            }));
+                        });
+                    } else {
+                        // Dodaj domyślne gałęzie
+                        branchSelect.append($('<option>', {
+                            value: 'main',
+                            text: 'main'
+                        }));
+                        branchSelect.append($('<option>', {
+                            value: 'master',
+                            text: 'master'
+                        }));
+                    }
+                    
+                    // Zapisz ID repozytorium w drzewie plików
+                    $('#aica-file-tree').data('repo-id', repoId);
+                    
                     // Załaduj strukturę plików
                     loadFileStructure(repoId);
                 } else {
@@ -1625,7 +1666,7 @@ jQuery(document).ready(function($) {
     }
     
     // Funkcja ładująca strukturę plików
-    function loadFileStructure(repoId, path = '') {
+    function loadFileStructure(repoId, path = '', branch = 'main') {
         // Pokaż wskaźnik ładowania
         $('.aica-loading-files').show();
         
@@ -1637,7 +1678,8 @@ jQuery(document).ready(function($) {
                 action: 'aica_get_repository_files',
                 nonce: aica_repos.nonce,
                 repo_id: repoId,
-                path: path
+                path: path,
+                branch: branch
             },
             success: function(response) {
                 if (response.success) {
@@ -1648,7 +1690,7 @@ jQuery(document).ready(function($) {
                     if (path === '') {
                         // Czyszczenie drzewa, jeśli ładujemy korzeń
                         $('#aica-file-tree').empty();
-                        buildFileTree(response.data.files, $('#aica-file-tree'), repoId);
+                        buildFileTree(response.data.files, $('#aica-file-tree'), repoId, branch);
                     } else {
                         // Dodawanie podfolderów do istniejącego drzewa
                         const folderItem = $('#aica-file-tree').find('[data-path="' + path + '"]').parent();
@@ -1658,7 +1700,7 @@ jQuery(document).ready(function($) {
                         childrenContainer.empty();
                         
                         // Budowanie poddrzewa
-                        buildFileTree(response.data.files, childrenContainer, repoId);
+                        buildFileTree(response.data.files, childrenContainer, repoId, branch);
                         
                         // Rozwinięcie folderu
                         folderItem.children('.aica-file-tree-folder').addClass('expanded');
@@ -1676,18 +1718,18 @@ jQuery(document).ready(function($) {
     }
     
     // Funkcja budująca drzewo plików
-    function buildFileTree(files, container, repoId) {
+    function buildFileTree(files, container, repoId, branch) {
         // Sortowanie: najpierw foldery, potem pliki, alfabetycznie
         files.sort(function(a, b) {
             if (a.type !== b.type) {
-                return a.type === 'dir' ? -1 : 1;
+                return a.type === 'dir' || a.type === 'tree' ? -1 : 1;
             }
             return a.name.localeCompare(b.name);
         });
         
         // Dodawanie elementów do drzewa
         $.each(files, function(index, file) {
-            if (file.type === 'dir') {
+            if (file.type === 'dir' || file.type === 'tree' || file.type === 'commit_directory') {
                 // Element folderu
                 const folderItem = $('<div class="aica-file-tree-item"></div>');
                 const folderHeader = $('<div class="aica-file-tree-folder" data-path="' + file.path + '"></div>');
@@ -1712,7 +1754,7 @@ jQuery(document).ready(function($) {
                         childrenContainer.slideToggle(200);
                     } else {
                         // Załaduj zawartość folderu
-                        loadFileStructure(repoId, path);
+                        loadFileStructure(repoId, path, branch);
                     }
                 });
             } else {
@@ -1771,7 +1813,7 @@ jQuery(document).ready(function($) {
                 // Obsługa kliknięcia pliku
                 fileLink.on('click', function() {
                     const path = $(this).data('path');
-                    loadFileContent(repoId, path);
+                    loadFileContent(repoId, path, branch);
                     
                     // Zaznaczenie aktywnego pliku
                     $('.aica-file-tree-file').removeClass('active');
@@ -1782,7 +1824,7 @@ jQuery(document).ready(function($) {
     }
     
     // Funkcja ładująca zawartość pliku
-    function loadFileContent(repoId, path) {
+    function loadFileContent(repoId, path, branch = 'main') {
         // Pokaż wskaźnik ładowania
         $('.aica-loading-content').show();
         
@@ -1800,7 +1842,8 @@ jQuery(document).ready(function($) {
                 action: 'aica_get_file_content',
                 nonce: aica_repos.nonce,
                 repo_id: repoId,
-                path: path
+                path: path,
+                branch: branch
             },
             success: function(response) {
                 // Ukryj wskaźnik ładowania
@@ -2025,7 +2068,7 @@ jQuery(document).ready(function($) {
         });
     });
     
-    // Dodawanie nowego repozytorium
+    // Dodawanie nowego repozytorium - przycisk "Dodaj repozytorium"
     $('.aica-add-repository-button').on('click', function() {
         // Przełącz na zakładkę GitHub, GitLab lub Bitbucket
         if ($('.aica-source-item[data-source="github"]').length > 0) {
@@ -2036,8 +2079,60 @@ jQuery(document).ready(function($) {
             $('.aica-source-item[data-source="bitbucket"]').trigger('click');
         } else {
             // Jeśli nie ma żadnego źródła, przekieruj do ustawień
+            alert(aica_repos.i18n.no_sources_configured);
             window.location.href = aica_repos.settings_url;
         }
+    });
+    
+    // Obsługa formularzy dodawania repozytoriów - użyj AJAX zamiast zwykłego formularza
+    $(document).on('submit', '.aica-add-repo-form', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const submitButton = form.find('button[name="aica_add_repository"]');
+        
+        // Dezaktywuj przycisk, aby uniknąć wielokrotnego kliknięcia
+        submitButton.prop('disabled', true);
+        submitButton.html('<span class="dashicons dashicons-update" style="animation: aica-spin 1s linear infinite;"></span> ' + aica_repos.i18n.adding);
+        
+        // Przygotuj dane formularza
+        const formData = new FormData(form[0]);
+        formData.append('action', 'aica_add_repository');
+        formData.append('nonce', aica_repos.nonce);
+        
+        // Wyślij żądanie AJAX
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                // Przywróć przycisk do oryginalnego stanu
+                submitButton.prop('disabled', false);
+                submitButton.html('<span class="dashicons dashicons-plus"></span> ' + aica_repos.i18n.add);
+                
+                if (response.success) {
+                    // Pokaż komunikat o sukcesie
+                    alert(response.data.message);
+                    
+                    // Przełącz na zakładkę zapisanych repozytoriów i odśwież stronę
+                    $('.aica-source-item[data-source="saved"]').trigger('click');
+                    location.reload();
+                } else {
+                    // Pokaż komunikat o błędzie
+                    alert(response.data.message || aica_repos.i18n.add_error);
+                }
+            },
+            error: function() {
+                // Przywróć przycisk do oryginalnego stanu
+                submitButton.prop('disabled', false);
+                submitButton.html('<span class="dashicons dashicons-plus"></span> ' + aica_repos.i18n.add);
+                
+                // Pokaż komunikat o błędzie
+                alert(aica_repos.i18n.add_error);
+            }
+        });
     });
 });
 </script>

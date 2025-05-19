@@ -736,7 +736,7 @@
             alert.fadeOut(300, function() {
                 alert.remove();
             });
-            });
+        });
         
         // Automatyczne ukrycie alertu po 5 sekundach
         setTimeout(function() {
@@ -763,7 +763,7 @@
     function showLoadingIndicator() {
         $('.aica-history-container').html(`
             <div class="aica-loading">
-                <div class="aica-loading-spinner"></div>
+               <div class="aica-loading-spinner"></div>
                 <p>${aica_history.i18n.loading}</p>
             </div>
         `);

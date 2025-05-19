@@ -34,140 +34,55 @@ if (!defined('ABSPATH')) {
     <div class="aica-dashboard">
         <div class="aica-dashboard-column">
             <!-- Karta statusu API -->
-            <div class="aica-card">
-                <div class="aica-card-header">
-                    <h2><span class="dashicons dashicons-performance"></span> <?php _e('Status API', 'ai-chat-assistant'); ?></h2>
-                    <div class="aica-card-header-actions">
-                        <button id="test-all-apis" class="button button-small">
-                            <span class="dashicons dashicons-update"></span>
-                        </button>
-                    </div>
-                </div>
-                <div class="aica-card-body">
-                    <div class="aica-status-section">
-                        <div class="aica-status-header">
-                            <h3><?php _e('Claude API', 'ai-chat-assistant'); ?></h3>
-                            <button id="test-claude-api" class="button button-small aica-button">
-                                <span class="dashicons dashicons-update"></span> <?php _e('Test', 'ai-chat-assistant'); ?>
-                            </button>
-                        </div>
-                        
-                        <?php if ($claude_api_status['valid']): ?>
-                            <div class="aica-status aica-status-success">
-                                <span class="aica-status-icon dashicons dashicons-yes-alt"></span>
-                                <div>
-                                    <p><?php _e('Połączono z API Claude', 'ai-chat-assistant'); ?></p>
-                                </div>
-                            </div>
-                            
-                            <table class="aica-status-details">
-                                <tr>
-                                    <th><?php _e('Status konta:', 'ai-chat-assistant'); ?></th>
-                                    <td><?php echo isset($claude_api_status['details']['status']) ? esc_html($claude_api_status['details']['status']) : __('Aktywne', 'ai-chat-assistant'); ?></td>
-                                </tr>
-                                <tr>
-                                    <th><?php _e('Aktualny model:', 'ai-chat-assistant'); ?></th>
-                                    <td>
-                                        <?php 
-                                        if (isset($claude_api_status['details']['current_model'])) {
-                                            echo esc_html($claude_api_status['details']['current_model']);
-                                            if (isset($claude_api_status['details']['model_available'])) {
-                                                if ($claude_api_status['details']['model_available']) {
-                                                    echo ' <span class="aica-badge aica-badge-success">' . __('dostępny', 'ai-chat-assistant') . '</span>';
-                                                } else {
-                                                    echo ' <span class="aica-badge aica-badge-error">' . __('niedostępny', 'ai-chat-assistant') . '</span>';
-                                                }
-                                            }
-                                        } else {
-                                            echo '-';
-                                        }
-                                        ?>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th><?php _e('Dostępne modele:', 'ai-chat-assistant'); ?></th>
-                                    <td>
-                                        <?php 
-                                        if (isset($claude_api_status['details']['models']) && !empty($claude_api_status['details']['models'])) {
-                                            echo '<div class="aica-models-list">';
-                                            foreach ($claude_api_status['details']['models'] as $model) {
-                                                echo '<span class="aica-model-badge">' . esc_html($model) . '</span>';
-                                            }
-                                            echo '</div>';
-                                        } else {
-                                            echo '-';
-                                        }
-                                        ?>
-                                    </td>
-                                </tr>
-                            </table>
-                        <?php else: ?>
-                            <div class="aica-status aica-status-error">
-                                <span class="aica-status-icon dashicons dashicons-warning"></span>
-                                <div>
-                                    <p><?php echo esc_html($claude_api_status['message']); ?></p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="aica-status-section">
-                        <div class="aica-status-header">
-                            <h3><?php _e('GitHub API', 'ai-chat-assistant'); ?></h3>
-                            <button id="test-github-api" class="button button-small aica-button">
-                                <span class="dashicons dashicons-update"></span> <?php _e('Test', 'ai-chat-assistant'); ?>
-                            </button>
-                        </div>
-                        
-                        <?php if ($github_api_status['valid']): ?>
-                            <div class="aica-status aica-status-success">
-                                <span class="aica-status-icon dashicons dashicons-yes-alt"></span>
-                                <div>
-                                    <p><?php _e('Połączono z API GitHub', 'ai-chat-assistant'); ?></p>
-                                </div>
-                            </div>
-                            
-                            <?php if (!empty($github_api_status['details'])): ?>
-                                <table class="aica-status-details">
-                                    <tr>
-                                        <th><?php _e('Limit zapytań:', 'ai-chat-assistant'); ?></th>
-                                        <td><?php echo esc_html($github_api_status['details']['limit']); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th><?php _e('Pozostało zapytań:', 'ai-chat-assistant'); ?></th>
-                                        <td>
-                                            <?php 
-                                            $remaining = $github_api_status['details']['remaining'];
-                                            $limit = $github_api_status['details']['limit'];
-                                            $percent = $limit > 0 ? ($remaining / $limit) * 100 : 0;
-                                            $bar_class = $percent > 50 ? 'success' : ($percent > 20 ? 'warning' : 'error');
-                                            ?>
-                                            <div class="aica-progress-container">
-                                                <div class="aica-progress-text"><?php echo esc_html($remaining); ?></div>
-                                                <div class="aica-progress-bar">
-                                                    <div class="aica-progress-value aica-progress-<?php echo $bar_class; ?>" style="width: <?php echo $percent; ?>%;"></div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th><?php _e('Reset limitu:', 'ai-chat-assistant'); ?></th>
-                                        <td><?php echo esc_html($github_api_status['details']['reset']); ?></td>
-                                    </tr>
-                                </table>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <div class="aica-status aica-status-error">
-                                <span class="aica-status-icon dashicons dashicons-warning"></span>
-                                <div>
-                                    <p><?php echo esc_html($github_api_status['message']); ?></p>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
+<div class="aica-status-section">
+    <div class="aica-status-header">
+        <h3><?php _e('GitLab API', 'ai-chat-assistant'); ?></h3>
+        <button id="test-gitlab-api" class="button button-small aica-button">
+            <span class="dashicons dashicons-update"></span> <?php _e('Test', 'ai-chat-assistant'); ?>
+        </button>
+    </div>
+
+    <?php if ($gitlab_api_status['valid']): ?>
+        <div class="aica-status aica-status-success">
+            <span class="aica-status-icon dashicons dashicons-yes-alt"></span>
+            <div>
+                <p><?php _e('Połączono z API GitLab', 'ai-chat-assistant'); ?></p>
             </div>
-            
+        </div>
+    <?php else: ?>
+        <div class="aica-status aica-status-error">
+            <span class="aica-status-icon dashicons dashicons-warning"></span>
+            <div>
+                <p><?php echo esc_html($gitlab_api_status['message']); ?></p>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
+
+<div class="aica-status-section">
+    <div class="aica-status-header">
+        <h3><?php _e('Bitbucket API', 'ai-chat-assistant'); ?></h3>
+        <button id="test-bitbucket-api" class="button button-small aica-button">
+            <span class="dashicons dashicons-update"></span> <?php _e('Test', 'ai-chat-assistant'); ?>
+        </button>
+    </div>
+
+    <?php if ($bitbucket_api_status['valid']): ?>
+        <div class="aica-status aica-status-success">
+            <span class="aica-status-icon dashicons dashicons-yes-alt"></span>
+            <div>
+                <p><?php _e('Połączono z API Bitbucket', 'ai-chat-assistant'); ?></p>
+            </div>
+        </div>
+    <?php else: ?>
+        <div class="aica-status aica-status-error">
+            <span class="aica-status-icon dashicons dashicons-warning"></span>
+            <div>
+                <p><?php echo esc_html($bitbucket_api_status['message']); ?></p>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
             <!-- Karta informacji systemowych -->
             <div class="aica-card">
                 <div class="aica-card-header">
@@ -931,100 +846,96 @@ if (!defined('ABSPATH')) {
 
 <script>
 jQuery(document).ready(function($) {
-    // Funkcja wyświetlająca komunikaty
     function showMessage(type, message) {
         var messageContainer = $('#aica-diagnostics-message');
         var messageElement = $('<div class="aica-message aica-message-' + type + '">' + message + '</div>');
-        
         messageContainer.append(messageElement);
-        
-        // Ukryj wiadomość po 5 sekundach
         setTimeout(function() {
             messageElement.css('opacity', '0');
-            setTimeout(function() {
-                messageElement.remove();
-            }, 300);
+            setTimeout(function() { messageElement.remove(); }, 300);
         }, 5000);
     }
-    
-    // Przycisk testowania API Claude
+
+    // Claude API
     $('#test-claude-api').on('click', function() {
-        var button = $(this);
-        var originalText = button.html();
-        button.html('<span class="dashicons dashicons-update aica-spin"></span> <?php _e('Testowanie...', 'ai-chat-assistant'); ?>');
-        button.prop('disabled', true);
-        
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'aica_verify_plugin',
-                nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
-            },
-            success: function(response) {
-                if (response.success) {
-                    showMessage('success', '<?php _e('Połączenie z API Claude działa poprawnie.', 'ai-chat-assistant'); ?>');
-                    // Odśwież stronę, aby zaktualizować informacje
-                    setTimeout(function() {
-                        location.reload();
-                    }, 2000);
-                } else {
-                    showMessage('error', response.data.message || '<?php _e('Nie udało się połączyć z API Claude.', 'ai-chat-assistant'); ?>');
-                }
-            },
-            error: function() {
-                showMessage('error', '<?php _e('Wystąpił błąd podczas testowania połączenia.', 'ai-chat-assistant'); ?>');
-            },
-            complete: function() {
-                button.html(originalText);
-                button.prop('disabled', false);
-            }
+        var button = $(this), originalText = button.html();
+        button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
+        $.post(ajaxurl, {
+            action: 'aica_verify_plugin',
+            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
+        }, function(response) {
+            response.success ? showMessage('success', 'Połączenie z API Claude działa poprawnie.') :
+                showMessage('error', response.data.message || 'Nie udało się połączyć z API Claude.');
+            location.reload();
+        }).fail(function() {
+            showMessage('error', 'Błąd połączenia z API Claude.');
+        }).always(function() {
+            button.html(originalText).prop('disabled', false);
         });
     });
-    
-    // Przycisk testowania API GitHub
+
+    // GitHub API
     $('#test-github-api').on('click', function() {
-        var button = $(this);
-        var originalText = button.html();
-        button.html('<span class="dashicons dashicons-update aica-spin"></span> <?php _e('Testowanie...', 'ai-chat-assistant'); ?>');
-        button.prop('disabled', true);
-        
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'aica_verify_plugin',
-                nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
-            },
-            success: function(response) {
-                if (response.success) {
-                    showMessage('success', '<?php _e('Połączenie z API GitHub działa poprawnie.', 'ai-chat-assistant'); ?>');
-                    // Odśwież stronę, aby zaktualizować informacje
-                    setTimeout(function() {
-                        location.reload();
-                    }, 2000);
-                } else {
-                    showMessage('error', response.data.message || '<?php _e('Nie udało się połączyć z API GitHub.', 'ai-chat-assistant'); ?>');
-                }
-            },
-            error: function() {
-                showMessage('error', '<?php _e('Wystąpił błąd podczas testowania połączenia.', 'ai-chat-assistant'); ?>');
-            },
-            complete: function() {
-                button.html(originalText);
-                button.prop('disabled', false);
-            }
+        var button = $(this), originalText = button.html();
+        button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
+        $.post(ajaxurl, {
+            action: 'aica_verify_plugin',
+            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
+        }, function(response) {
+            response.success ? showMessage('success', 'Połączenie z API GitHub działa poprawnie.') :
+                showMessage('error', response.data.message || 'Nie udało się połączyć z API GitHub.');
+            location.reload();
+        }).fail(function() {
+            showMessage('error', 'Błąd połączenia z API GitHub.');
+        }).always(function() {
+            button.html(originalText).prop('disabled', false);
         });
     });
-    
-    // Przycisk "Testuj wszystkie API"
+
+    // GitLab API
+    $('#test-gitlab-api').on('click', function() {
+        var button = $(this), originalText = button.html();
+        button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
+        $.post(ajaxurl, {
+            action: 'aica_test_gitlab_api',
+            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
+        }, function(response) {
+            response.success ? showMessage('success', 'Połączenie z API GitLab działa poprawnie.') :
+                showMessage('error', response.data.message || 'Nie udało się połączyć z API GitLab.');
+            location.reload();
+        }).fail(function() {
+            showMessage('error', 'Błąd połączenia z API GitLab.');
+        }).always(function() {
+            button.html(originalText).prop('disabled', false);
+        });
+    });
+
+    // Bitbucket API
+    $('#test-bitbucket-api').on('click', function() {
+        var button = $(this), originalText = button.html();
+        button.html('<span class="dashicons dashicons-update aica-spin"></span> Testowanie...').prop('disabled', true);
+        $.post(ajaxurl, {
+            action: 'aica_test_bitbucket_api',
+            nonce: '<?php echo wp_create_nonce('aica_diagnostics_nonce'); ?>'
+        }, function(response) {
+            response.success ? showMessage('success', 'Połączenie z API Bitbucket działa poprawnie.') :
+                showMessage('error', response.data.message || 'Nie udało się połączyć z API Bitbucket.');
+            location.reload();
+        }).fail(function() {
+            showMessage('error', 'Błąd połączenia z API Bitbucket.');
+        }).always(function() {
+            button.html(originalText).prop('disabled', false);
+        });
+    });
+
     $('#test-all-apis').on('click', function() {
         $('#test-claude-api').trigger('click');
-        setTimeout(function() {
-            $('#test-github-api').trigger('click');
-        }, 1000);
+        setTimeout(() => $('#test-github-api').trigger('click'), 1000);
+        setTimeout(() => $('#test-gitlab-api').trigger('click'), 2000);
+        setTimeout(() => $('#test-bitbucket-api').trigger('click'), 3000);
     });
-    
+
+
     // Przycisk naprawy bazy danych
     $('#repair-database').on('click', function() {
         var button = $(this);

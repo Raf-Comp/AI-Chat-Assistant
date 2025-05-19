@@ -342,7 +342,7 @@
         $('.aica-toggle-password').each(function() {
             $(this).on('click', function(e) {
                 e.preventDefault();
-                var input = $(this).siblings('input');
+                var input = $(this).closest('.aica-api-key-field').find('input');
                 var icon = $(this).find('.dashicons');
                 
                 if (input.attr('type') === 'password') {

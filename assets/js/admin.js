@@ -54,7 +54,9 @@
      * Obsługa zakładek
      */
     function initTabs() {
-        $('.aica-tab-item').on('click', function() {
+        $('.aica-tab-item').on('click', function(e) {
+            e.preventDefault();
+            
             // Usunięcie aktywnej klasy z wszystkich zakładek
             $('.aica-tab-item').removeClass('active');
             // Dodanie aktywnej klasy do klikniętej zakładki
@@ -77,6 +79,9 @@
         var activeTab = localStorage.getItem('aica_active_tab');
         if (activeTab && $('#' + activeTab).length) {
             $('.aica-tab-item[data-tab="' + activeTab + '"]').trigger('click');
+        } else {
+            // Jeśli nie ma zapisanej zakładki, pokaż pierwszą
+            $('.aica-tab-item:first').trigger('click');
         }
     }
     
@@ -89,18 +94,20 @@
             $('#aica_max_tokens').val($(this).val());
         });
         
-        $('#aica_max_tokens').on('input', function() {
+        $('#aica_max_tokens').on('change', function() {
             const value = parseInt($(this).val());
-            const min = parseInt($(this).attr('min'));
-            const max = parseInt($(this).attr('max'));
+            const min = parseInt($(this).attr('min') || 1000);
+            const max = parseInt($(this).attr('max') || 100000);
             
-            if (value < min) {
-                $(this).val(min);
+            let validValue = value;
+            if (isNaN(value) || value < min) {
+                validValue = min;
             } else if (value > max) {
-                $(this).val(max);
+                validValue = max;
             }
             
-            $('#aica_max_tokens_range').val($(this).val());
+            $(this).val(validValue);
+            $('#aica_max_tokens_range').val(validValue);
         });
         
         // Obsługa pola z zakresem dla temperatury
@@ -109,27 +116,34 @@
                 $('#aica_temperature').val($(this).val());
             });
             
-            $('#aica_temperature').on('input', function() {
+            $('#aica_temperature').on('change', function() {
                 const value = parseFloat($(this).val());
-                const min = parseFloat($(this).attr('min'));
-                const max = parseFloat($(this).attr('max'));
+                const min = parseFloat($(this).attr('min') || 0);
+                const max = parseFloat($(this).attr('max') || 1);
                 
-                if (value < min) {
-                    $(this).val(min);
+                let validValue = value;
+                if (isNaN(value) || value < min) {
+                    validValue = min;
                 } else if (value > max) {
-                    $(this).val(max);
+                    validValue = max;
                 }
                 
-                $('#aica_temperature_range').val($(this).val());
+                $(this).val(validValue);
+                $('#aica_temperature_range').val(validValue);
             });
         }
+        
+        // Dodatkowy trigger dla poprawnego ustawienia wartości na starcie
+        $('#aica_max_tokens').trigger('change');
+        $('#aica_temperature').trigger('change');
     }
     
     /**
      * Obsługa przycisków pokaż/ukryj hasło
      */
     function initPasswordToggles() {
-        $('.aica-toggle-password').on('click', function() {
+        $('.aica-toggle-password').on('click', function(e) {
+            e.preventDefault();
             var input = $(this).siblings('input');
             var icon = $(this).find('.dashicons');
             
@@ -179,7 +193,8 @@
             $('#aica_allowed_file_extensions').val(extensions.join(','));
         }
         
-        $('#add-extension').on('click', function() {
+        $('#add-extension').on('click', function(e) {
+            e.preventDefault();
             var extension = $('#aica_file_extension_input').val().trim();
             
             if (extension !== '') {
@@ -217,7 +232,8 @@
         });
         
         // Usuwanie tagów
-        $(document).on('click', '.aica-remove-tag', function() {
+        $(document).on('click', '.aica-remove-tag', function(e) {
+            e.preventDefault();
             $(this).parent().remove();
             updateExtensionsField();
         });
@@ -230,14 +246,16 @@
         if ($('#aica-templates-container').length) {
             let templateCount = $('.aica-template-item').length;
             
-            $('#add-template').on('click', function() {
+            $('#add-template').on('click', function(e) {
+                e.preventDefault();
                 const template = $('#template-item-template').html().replace(/__INDEX__/g, templateCount);
                 
                 $('#aica-templates-container').append(template);
                 templateCount++;
             });
             
-            $(document).on('click', '.aica-template-delete', function() {
+            $(document).on('click', '.aica-template-delete', function(e) {
+                e.preventDefault();
                 $(this).closest('.aica-template-item').slideUp(300, function() {
                     $(this).remove();
                 });
@@ -276,7 +294,8 @@
      * Obsługa przycisku odświeżania modeli
      */
     function initRefreshModels() {
-        $('#refresh-models').on('click', function() {
+        $('#refresh-models').on('click', function(e) {
+            e.preventDefault();
             var button = $(this);
             var originalText = button.html();
             
@@ -314,14 +333,15 @@
      */
     function initApiTesting() {
         // Testowanie połączenia z API Claude
-        $('#test-claude-api').on('click', function() {
+        $('#test-claude-api').on('click', function(e) {
+            e.preventDefault();
             var button = $(this);
             var originalText = button.html();
             var resultContainer = $('#api-test-result');
             
             // Ukrycie poprzedniego wyniku
             resultContainer.removeClass('success error').addClass('loading');
-            resultContainer.html('<span class="aica-spinner"></span> ' + aica_data.i18n.loading);
+            resultContainer.html('<span class="aica-spinner"></span> ' + (aica_data && aica_data.i18n && aica_data.i18n.loading ? aica_data.i18n.loading : 'Testowanie...'));
             
             // Pobranie klucza API
             var apiKey = $('#aica_claude_api_key').val();
@@ -334,11 +354,11 @@
             
             // Wywołanie AJAX do testowania połączenia
             $.ajax({
-                url: aica_data.ajax_url,
+                url: aica_data.ajax_url || ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'aica_test_api_connection',
-                    nonce: aica_data.settings_nonce,
+                    nonce: aica_data.settings_nonce || $('#aica_settings_nonce').val(),
                     api_type: 'claude',
                     api_key: apiKey
                 },
@@ -359,14 +379,15 @@
         });
         
         // Testowanie połączenia z API GitHub
-        $('#test-github-api').on('click', function() {
+        $('#test-github-api').on('click', function(e) {
+            e.preventDefault();
             var button = $(this);
             var originalText = button.html();
             var resultContainer = $('#github-test-result');
             
             // Ukrycie poprzedniego wyniku
             resultContainer.removeClass('success error').addClass('loading');
-            resultContainer.html('<span class="aica-spinner"></span> ' + aica_data.i18n.loading);
+            resultContainer.html('<span class="aica-spinner"></span> ' + (aica_data && aica_data.i18n && aica_data.i18n.loading ? aica_data.i18n.loading : 'Testowanie...'));
             
             // Pobranie tokenu
             var token = $('#aica_github_token').val();
@@ -379,11 +400,11 @@
             
             // Wywołanie AJAX do testowania połączenia
             $.ajax({
-                url: aica_data.ajax_url,
+                url: aica_data.ajax_url || ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'aica_test_api_connection',
-                    nonce: aica_data.settings_nonce,
+                    nonce: aica_data.settings_nonce || $('#aica_settings_nonce').val(),
                     api_type: 'github',
                     api_key: token
                 },
@@ -404,14 +425,15 @@
         });
         
         // Testowanie połączenia z API GitLab
-        $('#test-gitlab-api').on('click', function() {
+        $('#test-gitlab-api').on('click', function(e) {
+            e.preventDefault();
             var button = $(this);
             var originalText = button.html();
             var resultContainer = $('#gitlab-test-result');
             
             // Ukrycie poprzedniego wyniku
             resultContainer.removeClass('success error').addClass('loading');
-            resultContainer.html('<span class="aica-spinner"></span> ' + aica_data.i18n.loading);
+            resultContainer.html('<span class="aica-spinner"></span> ' + (aica_data && aica_data.i18n && aica_data.i18n.loading ? aica_data.i18n.loading : 'Testowanie...'));
             
             // Pobranie tokenu
             var token = $('#aica_gitlab_token').val();
@@ -424,11 +446,11 @@
             
             // Wywołanie AJAX do testowania połączenia
             $.ajax({
-                url: aica_data.ajax_url,
+                url: aica_data.ajax_url || ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'aica_test_api_connection',
-                    nonce: aica_data.settings_nonce,
+                    nonce: aica_data.settings_nonce || $('#aica_settings_nonce').val(),
                     api_type: 'gitlab',
                     api_key: token
                 },
@@ -449,14 +471,15 @@
         });
         
         // Testowanie połączenia z API Bitbucket
-        $('#test-bitbucket-api').on('click', function() {
+        $('#test-bitbucket-api').on('click', function(e) {
+            e.preventDefault();
             var button = $(this);
             var originalText = button.html();
             var resultContainer = $('#bitbucket-test-result');
             
             // Ukrycie poprzedniego wyniku
             resultContainer.removeClass('success error').addClass('loading');
-            resultContainer.html('<span class="aica-spinner"></span> ' + aica_data.i18n.loading);
+            resultContainer.html('<span class="aica-spinner"></span> ' + (aica_data && aica_data.i18n && aica_data.i18n.loading ? aica_data.i18n.loading : 'Testowanie...'));
             
             // Pobranie danych dostępowych
             var username = $('#aica_bitbucket_username').val();
@@ -470,11 +493,11 @@
             
             // Wywołanie AJAX do testowania połączenia
             $.ajax({
-                url: aica_data.ajax_url,
+                url: aica_data.ajax_url || ajaxurl,
                 type: 'POST',
                 data: {
                     action: 'aica_test_api_connection',
-                    nonce: aica_data.settings_nonce,
+                    nonce: aica_data.settings_nonce || $('#aica_settings_nonce').val(),
                     api_type: 'bitbucket',
                     username: username,
                     password: password

@@ -41,16 +41,16 @@
   --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   --hover-transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
-  /* Wymiary */
-  --sidebar-width: 320px;
-  --sidebar-collapsed-width: 80px;
+  /* Wymiary - zoptymalizowane */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 60px;
   --border-radius-sm: 8px;
   --border-radius: 12px;
   --border-radius-lg: 16px;
   --spacing-xs: 8px;
-  --spacing: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  --spacing: 14px;
+  --spacing-lg: 20px;
+  --spacing-xl: 28px;
   
   /* Typografia */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -109,7 +109,7 @@ body {
   overflow: hidden;
 }
 
-/* Panel boczny */
+/* Panel boczny - zoptymalizowany */
 .aica-sidebar {
   width: var(--sidebar-width);
   background-color: white;
@@ -130,7 +130,7 @@ body {
 }
 
 .aica-sidebar-header {
-  padding: var(--spacing);
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -144,23 +144,23 @@ body {
 .aica-branding {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aica-logo {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background-color: var(--primary);
   border-radius: var(--border-radius);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .aica-branding h1 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
   white-space: nowrap;
@@ -173,8 +173,8 @@ body {
 }
 
 .aica-sidebar-toggle {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
@@ -207,7 +207,7 @@ body {
 
 /* Akcje w panelu bocznym */
 .aica-sidebar-actions {
-  padding: var(--spacing);
+  padding: 12px;
   border-bottom: 1px solid var(--neutral-200);
 }
 
@@ -220,8 +220,8 @@ body {
   color: white;
   border: none;
   border-radius: var(--border-radius);
-  padding: 12px 16px;
-  font-size: 15px;
+  padding: 10px 14px;
+  font-size: 14px;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -242,8 +242,8 @@ body {
 }
 
 .aica-sidebar.collapsed .aica-action-button {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   margin: 0 auto;
   border-radius: 50%;
@@ -253,7 +253,7 @@ body {
 .aica-tabs {
   display: flex;
   border-bottom: 1px solid var(--neutral-200);
-  padding: 0 var(--spacing);
+  padding: 0 12px;
 }
 
 .dark-mode .aica-tabs {
@@ -263,31 +263,31 @@ body {
 .aica-sidebar.collapsed .aica-tabs {
   flex-direction: column;
   border-bottom: none;
-  padding-top: var(--spacing);
-  padding-bottom: var(--spacing);
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .aica-tab {
   flex: 1;
-  padding: 16px;
+  padding: 14px;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--neutral-500);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   transition: color var(--hover-transition), border-color var(--hover-transition);
 }
 
 .aica-sidebar.collapsed .aica-tab {
   justify-content: center;
-  padding: 12px 0;
-  margin-bottom: 8px;
+  padding: 10px 0;
+  margin-bottom: 6px;
   border-bottom: none;
   border-left: 3px solid transparent;
 }
@@ -340,17 +340,17 @@ body {
 
 /* Wyszukiwarka rozmów */
 .aica-search-container {
-  padding: var(--spacing);
+  padding: 12px;
   position: relative;
 }
 
 .aica-search-input {
   width: 100%;
-  padding: 12px 16px 12px 42px;
+  padding: 10px 14px 10px 38px;
   border-radius: var(--border-radius);
   border: 1px solid var(--neutral-200);
   background-color: var(--neutral-50);
-  font-size: 14px;
+  font-size: 13px;
   color: var(--neutral-900);
   transition: border-color var(--hover-transition), box-shadow var(--hover-transition);
 }
@@ -373,7 +373,7 @@ body {
 
 .aica-search-icon {
   position: absolute;
-  left: 28px;
+  left: 24px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--neutral-500);
@@ -384,14 +384,14 @@ body {
   display: none;
 }
 
-/* Lista rozmów */
+/* Lista rozmów - zoptymalizowana */
 .aica-sessions-list {
   overflow-y: auto;
   flex: 1;
 }
 
 .aica-session-item {
-  padding: 14px 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--neutral-200);
   cursor: pointer;
   transition: background-color var(--hover-transition);
@@ -422,19 +422,19 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .aica-session-title {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .aica-session-date {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--neutral-500);
 }
 
@@ -443,7 +443,7 @@ body {
 }
 
 .aica-session-preview {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--neutral-600);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -456,9 +456,60 @@ body {
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* Info o modelu w panelu bocznym */
+.aica-model-info-sidebar {
+  padding: 12px;
+  border-bottom: 1px solid var(--neutral-200);
+  font-size: 13px;
+}
+
+.aica-model-info-sidebar h4 {
+  font-size: 14px;
+  margin: 0 0 8px 0;
+  color: var(--neutral-700);
+}
+
+.aica-model-info-sidebar p {
+  margin: 0 0 8px 0;
+  color: var(--neutral-600);
+}
+
+.aica-help-text {
+  color: var(--neutral-500);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.aica-model-info-sidebar a.aica-button-sm {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--border-radius-sm);
+  background-color: var(--primary);
+  color: white;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+.dark-mode .aica-model-info-sidebar {
+  border-bottom-color: var(--neutral-700);
+}
+
+.dark-mode .aica-model-info-sidebar h4 {
+  color: var(--neutral-300);
+}
+
+.dark-mode .aica-model-info-sidebar p {
+  color: var(--neutral-400);
+}
+
+.dark-mode .aica-help-text {
+  color: var(--neutral-500);
+}
+
 /* Stopka panelu bocznego */
 .aica-sidebar-footer {
-  padding: var(--spacing);
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -472,17 +523,17 @@ body {
 
 .aica-sidebar.collapsed .aica-sidebar-footer {
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .aica-version {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--neutral-500);
 }
 
 .aica-settings-link {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
@@ -507,12 +558,12 @@ body {
   color: var(--neutral-300);
 }
 
-/* Panel główny */
+/* Panel główny - zoptymalizowany */
 .aica-main-panel {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: white;
+  background-color: #f9f9f9;
   overflow: hidden;
 }
 
@@ -521,15 +572,17 @@ body {
 }
 
 .aica-main-header {
-  padding: var(--spacing);
+  padding: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--neutral-200);
+  background-color: white;
 }
 
 .dark-mode .aica-main-header {
   border-bottom-color: var(--neutral-700);
+  background-color: var(--secondary);
 }
 
 .aica-conversation-info {
@@ -538,25 +591,25 @@ body {
 }
 
 .aica-conversation-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0 0 4px 0;
 }
 
 .aica-conversation-date {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--neutral-500);
 }
 
 .aica-main-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .aica-toolbar-button {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border-radius: var(--border-radius-sm);
   background-color: var(--neutral-100);
@@ -615,8 +668,8 @@ body {
 }
 
 .aica-dropdown-item {
-  padding: 10px 12px;
-  font-size: 14px;
+  padding: 8px 10px;
+  font-size: 13px;
   background: none;
   border: none;
   cursor: pointer;
@@ -624,7 +677,7 @@ body {
   text-align: left;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border-radius: var(--border-radius-sm);
   color: var(--neutral-700);
   transition: background-color var(--hover-transition);
@@ -694,28 +747,28 @@ body {
 }
 
 .aica-welcome-icon {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   background-color: var(--primary-light);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   color: white;
-  font-size: 36px;
+  font-size: 32px;
 }
 
 .aica-welcome-screen h2 {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .aica-welcome-screen p {
-  font-size: 16px;
+  font-size: 15px;
   color: var(--neutral-600);
-  margin-bottom: 32px;
+  margin-bottom: 28px;
   max-width: 600px;
   line-height: 1.6;
 }
@@ -730,26 +783,26 @@ body {
 }
 
 .aica-example-prompts h3 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .aica-examples {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .aica-example-prompt {
   background-color: white;
   border: 1px solid var(--neutral-200);
   border-radius: var(--border-radius);
-  padding: 14px 16px;
+  padding: 12px 14px;
   text-align: left;
   cursor: pointer;
   transition: border-color var(--hover-transition), box-shadow var(--hover-transition);
-  font-size: 14px;
+  font-size: 13px;
   color: var(--neutral-800);
 }
 
@@ -772,7 +825,7 @@ body {
 .aica-messages {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .aica-message {
@@ -791,10 +844,11 @@ body {
 }
 
 .aica-message-bubble {
-  padding: 14px 18px;
-  border-radius: var(--border-radius);
-  font-size: 15px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
   line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .aica-user-message .aica-message-bubble {
@@ -810,7 +864,7 @@ body {
 }
 
 .aica-message-info {
-  font-size: 12px;
+  font-size: 11px;
   margin-top: 4px;
   display: flex;
   align-items: center;
@@ -831,8 +885,8 @@ body {
   background-color: #1E293B;
   color: #F8FAFC;
   border-radius: var(--border-radius-sm);
-  padding: 16px;
-  margin: 12px 0;
+  padding: 14px;
+  margin: 10px 0;
   font-family: var(--font-mono);
 }
 
@@ -842,7 +896,7 @@ body {
 
 .aica-message code {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .aica-message pre code {
@@ -866,7 +920,7 @@ body {
 /* Listy w wiadomościach */
 .aica-message ul, .aica-message ol {
   margin: 8px 0;
-  padding-left: 24px;
+  padding-left: 22px;
 }
 
 .aica-message li {
@@ -875,7 +929,7 @@ body {
 
 /* Inputy i akcje */
 .aica-input-container {
-  padding: var(--spacing);
+  padding: 14px;
   border-top: 1px solid var(--neutral-200);
   background-color: white;
 }
@@ -888,10 +942,10 @@ body {
 .aica-input-wrapper {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: 10px;
   background-color: var(--neutral-50);
   border-radius: var(--border-radius);
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--neutral-200);
   transition: border-color var(--hover-transition), box-shadow var(--hover-transition);
 }
@@ -916,11 +970,11 @@ body {
   background: none;
   resize: none;
   outline: none;
-  font-size: 15px;
+  font-size: 14px;
   min-height: 24px;
   max-height: 200px;
   line-height: 1.5;
-  padding: 8px 0;
+  padding: 6px 0;
   color: var(--neutral-900);
 }
 
@@ -934,14 +988,14 @@ body {
 
 .aica-input-tools {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .aica-tool-button {
   background: none;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
@@ -969,8 +1023,8 @@ body {
 }
 
 .aica-send-button {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: none;
   background-color: var(--primary);
@@ -998,15 +1052,15 @@ body {
 .aica-input-footer {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 11px;
   color: var(--neutral-500);
 }
 
 .aica-model-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .aica-model-name {
@@ -1026,7 +1080,7 @@ body {
 }
 
 .aica-typing-dot {
-  width: 4px;
+  width: 4px; 
   height: 4px;
   border-radius: 50%;
   background-color: var(--neutral-400);
@@ -1108,7 +1162,7 @@ body {
   background-color: white;
   border-radius: var(--border-radius);
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
   box-shadow: var(--card-shadow);
   animation: fadeInDown 0.3s ease forwards;
 }
@@ -1118,7 +1172,7 @@ body {
 }
 
 .aica-modal-header {
-  padding: 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1130,7 +1184,7 @@ body {
 }
 
 .aica-modal-header h3 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
 }
@@ -1138,8 +1192,8 @@ body {
 .aica-modal-close {
   background: none;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
@@ -1181,10 +1235,10 @@ body {
 
 .aica-form-field input {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   border-radius: var(--border-radius-sm);
   border: 1px solid var(--neutral-200);
-  font-size: 15px;
+  font-size: 14px;
   background-color: white;
   color: var(--neutral-900);
   transition: border-color var(--hover-transition), box-shadow var(--hover-transition);
@@ -1220,9 +1274,9 @@ body {
 }
 
 .aica-button {
-  padding: 10px 16px;
+  padding: 8px 14px;
   border-radius: var(--border-radius-sm);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: background-color var(--hover-transition), color var(--hover-transition), border-color var(--hover-transition);
@@ -1281,7 +1335,7 @@ body {
   background-color: white;
   border-radius: var(--border-radius);
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
   box-shadow: var(--card-shadow);
   animation: fadeInDown 0.3s ease forwards;
 }
@@ -1291,7 +1345,7 @@ body {
 }
 
 .aica-dialog-header {
-  padding: 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1303,7 +1357,7 @@ body {
 }
 
 .aica-dialog-header h3 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
 }
@@ -1311,8 +1365,8 @@ body {
 .aica-dialog-close {
   background: none;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--border-radius-sm);
   display: flex;
   align-items: center;
@@ -1338,7 +1392,7 @@ body {
 
 .aica-dialog-body p {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--neutral-700);
 }
@@ -1373,8 +1427,8 @@ body {
 
 /* Spinner ładowania */
 .aica-spinner {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border: 3px solid rgba(99, 102, 241, 0.2);
   border-radius: 50%;
   border-top-color: var(--primary);
@@ -1400,10 +1454,10 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  padding: 28px 14px;
   text-align: center;
   color: var(--neutral-600);
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Responsywność */
@@ -1427,8 +1481,8 @@ body {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 56px;
-    height: 56px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background-color: var(--primary);
     color: white;
@@ -1465,21 +1519,29 @@ body {
   .aica-examples {
     grid-template-columns: 1fr;
   }
+
+  .aica-conversation-title {
+    font-size: 15px;
+  }
+
+  .aica-main-header {
+    padding: 12px;
+  }
 }
 
 @media (max-width: 576px) {
   .aica-main-actions .aica-toolbar-button {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
   }
   
   .aica-send-button {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
   }
   
   .aica-welcome-screen h2 {
-    font-size: 24px;
+    font-size: 22px;
   }
   
   .aica-modal-content,
@@ -1488,7 +1550,12 @@ body {
   }
   
   .aica-input-container {
-    padding: 12px;
+    padding: 10px;
+  }
+
+  .aica-message-bubble {
+    padding: 10px 14px;
+    font-size: 13px;
   }
 }
 
@@ -1512,32 +1579,32 @@ body {
 
 /* Tryb kompaktowy */
 .aica-compact-view .aica-message-bubble {
-  padding: 10px 14px;
-  font-size: 14px;
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
 .aica-compact-view .aica-input-wrapper {
-  padding: 8px 10px;
+  padding: 6px 8px;
 }
 
 .aica-compact-view #aica-message-input {
-  padding: 6px 0;
+  padding: 4px 0;
   min-height: 20px;
 }
 
 .aica-compact-view .aica-input-container {
-  padding: 12px;
+  padding: 10px;
 }
 
 .aica-compact-view .aica-toolbar-button,
 .aica-compact-view .aica-tool-button {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 
 .aica-compact-view .aica-send-button {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
 }
 
 .aica-compact-view .aica-modal-header,
@@ -1546,7 +1613,7 @@ body {
 .aica-compact-view .aica-dialog-header,
 .aica-compact-view .aica-dialog-body,
 .aica-compact-view .aica-dialog-footer {
-  padding: 16px;
+  padding: 12px;
 }
 
 /* Podświetlanie składni kodu */
@@ -1615,7 +1682,7 @@ body {
   bottom: 20px;
   right: 20px;
   z-index: 2000;
-  max-width: 350px;
+  max-width: 320px;
   animation: slideInRight 0.3s ease forwards;
 }
 
@@ -1623,7 +1690,7 @@ body {
   background-color: white;
   border-radius: var(--border-radius);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1636,7 +1703,7 @@ body {
 }
 
 .aica-notification-message {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--neutral-800);
   margin-right: 10px;
 }

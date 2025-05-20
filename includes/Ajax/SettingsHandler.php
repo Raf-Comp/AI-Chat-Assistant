@@ -50,7 +50,11 @@ class SettingsHandler {
             'auto_purge_enabled' => isset($_POST['aica_auto_purge_enabled']) ? 1 : 0,
             'auto_purge_days' => isset($_POST['aica_auto_purge_days']) ? intval($_POST['aica_auto_purge_days']) : 30,
             
-            'debug_mode' => isset($_POST['aica_debug_mode']) ? 1 : 0
+            'debug_mode' => isset($_POST['aica_debug_mode']) ? 1 : 0,
+            
+            // Nowe opcje dla ustawień interfejsu użytkownika
+            'dark_mode' => isset($_POST['aica_dark_mode']) ? 1 : 0,
+            'compact_view' => isset($_POST['aica_compact_view']) ? 1 : 0
         ];
         
         // Zapisz opcje
@@ -96,7 +100,7 @@ class SettingsHandler {
         }
     }
     
-    /**
+        /**
      * Testowanie połączenia z API
      */
     public function test_api_connection() {

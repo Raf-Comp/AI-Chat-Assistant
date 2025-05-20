@@ -23,6 +23,9 @@ class Main {
         
         // Dodajemy hook do rejestracji styli i skryptów
         add_action('admin_enqueue_scripts', [$this, 'register_admin_assets']);
+        
+        // Dodajemy hook do zapisywania ustawień interfejsu użytkownika
+        add_action('admin_post_save_aica_interface_settings', [$this, 'save_interface_settings']);
     }
     
     /**
@@ -84,6 +87,33 @@ class Main {
     }
     
     /**
+     * Zapisywanie ustawień interfejsu użytkownika
+     */
+    public function save_interface_settings() {
+        // Sprawdzenie nonce
+        if (!isset($_POST['aica_interface_nonce']) || !wp_verify_nonce($_POST['aica_interface_nonce'], 'aica_interface_settings')) {
+            wp_die(__('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant'));
+        }
+        
+        // Zapisz ustawienia interfejsu
+        $dark_mode = isset($_POST['aica_dark_mode']) ? 1 : 0;
+        $compact_view = isset($_POST['aica_compact_view']) ? 1 : 0;
+        
+        update_option('aica_dark_mode', $dark_mode);
+        update_option('aica_compact_view', $compact_view);
+        
+        // Zapisz ustawienia w localStorage przez JavaScript
+        ?>
+        <script type="text/javascript">
+            localStorage.setItem('aica_dark_mode', '<?php echo $dark_mode ? 'true' : 'false'; ?>');
+            localStorage.setItem('aica_compact_mode', '<?php echo $compact_view ? 'true' : 'false'; ?>');
+            window.location.href = '<?php echo admin_url('admin.php?page=ai-chat-assistant&settings-updated=1'); ?>';
+        </script>
+        <?php
+        exit;
+    }
+    
+    /**
      * Rejestracja skryptów i stylów administracyjnych
      */
     public function register_admin_assets($hook) {
@@ -106,7 +136,6 @@ class Main {
             // Strona ustawień
             // Korzystamy z oddzielnych plików zamiast rejestrować je tutaj
             // Pliki te są ładowane bezpośrednio w szablonie settings.php
-            // Nie rejestrujemy tutaj settings.js i settings.css, ponieważ są one ładowane w szablonie
             
             // Skrypty ogólne dla administratora
             wp_enqueue_script(
@@ -123,6 +152,7 @@ class Main {
                 'admin_url' => admin_url('admin-post.php'),
                 'nonce' => wp_create_nonce('aica_nonce'),
                 'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
+                'interface_nonce' => wp_create_nonce('aica_interface_settings'),
                 'i18n' => [
                     'error' => __('Błąd', 'ai-chat-assistant'),
                     'loading' => __('Ładowanie...', 'ai-chat-assistant'),
@@ -298,51 +328,14 @@ class Main {
                 ]
             ]);
         } elseif ($page === 'ai-chat-assistant') {
-            // Strona główna czatu - zaktualizowana do nowego nowoczesnego wyglądu
-            wp_enqueue_style(
-                'aica-modern-chat',
-                AICA_PLUGIN_URL . 'assets/css/modern-chat.css',
-                [],
-                AICA_VERSION
-            );
-            wp_enqueue_script(
-                'aica-modern-chat',
-                AICA_PLUGIN_URL . 'assets/js/modern-chat.js',
-                ['jquery'],
-                AICA_VERSION,
-                true
-            );
-            
-            // Dodanie dashicons
-            wp_enqueue_style('dashicons');
-            
-            // Dodaj Prism.js dla podświetlania składni kodu
-            wp_enqueue_style('prism-css', AICA_PLUGIN_URL . 'assets/vendor/prism/prism.css', [], AICA_VERSION);
-            wp_enqueue_script('prism-js', AICA_PLUGIN_URL . 'assets/vendor/prism/prism.js', [], AICA_VERSION, true);
-            
-            // Skrypty ogólne dla administratora
-            wp_enqueue_script(
-                'aica-admin',
-                AICA_PLUGIN_URL . 'assets/js/admin.js',
-                ['jquery'],
-                AICA_VERSION,
-                true
-            );
-            
-            // Zmieniamy również wp_localize_script aby używało naszego nowego skryptu
-            wp_localize_script('aica-modern-chat', 'aica_data', [
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('aica_nonce'),
-                'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
-                'i18n' => [
-                    'error' => __('Błąd', 'ai-chat-assistant'),
-                    'loading' => __('Ładowanie...', 'ai-chat-assistant'),
-                    'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
-                    'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
-                    'saved' => __('Zapisano', 'ai-chat-assistant'),
-                    'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
-                ]
-            ]);
+            // Strona główna czatu
+            // ChatPage::enqueue_chat_assets zajmuje się już rejestracją skryptów i stylów
+            // Sprawdzamy tylko czy ustawienia UI zostały zapisane
+            if (isset($_GET['settings-updated']) && $_GET['settings-updated'] == 1) {
+                add_action('admin_notices', function() {
+                    echo '<div class="notice notice-success is-dismissible"><p>' . __('Ustawienia interfejsu zostały zapisane.', 'ai-chat-assistant') . '</p></div>';
+                });
+            }
         } else if (strpos($hook, 'ai-chat-assistant') !== false) {
             // Dla pozostałych stron wtyczki, które nie są obsługiwane powyżej
             // Ładujemy tylko podstawowe skrypty administracyjne
@@ -360,6 +353,7 @@ class Main {
                 'admin_url' => admin_url('admin-post.php'),
                 'nonce' => wp_create_nonce('aica_nonce'),
                 'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
+                'interface_nonce' => wp_create_nonce('aica_interface_settings'),
                 'i18n' => [
                     'error' => __('Błąd', 'ai-chat-assistant'),
                     'loading' => __('Ładowanie...', 'ai-chat-assistant'),

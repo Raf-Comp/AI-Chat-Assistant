@@ -88,7 +88,7 @@ class ChatHandler {
             }
         }
         
-        // Pobranie ustawień Claude
+        // Pobranie ustawień Claude - korzystamy z głównych, globalnych ustawień
         $api_key = aica_get_option('claude_api_key', '');
         $model = aica_get_option('claude_model', 'claude-3-haiku-20240307');
         $max_tokens = intval(aica_get_option('max_tokens', 4000));

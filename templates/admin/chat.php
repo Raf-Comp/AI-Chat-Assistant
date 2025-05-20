@@ -78,47 +78,29 @@ if (!defined('ABSPATH')) {
         
         <!-- Zawartość zakładki Ustawienia -->
         <div class="aica-tab-content" id="settings-content">
-            <div class="aica-settings-form">
-                <div class="aica-setting-group">
-                    <h3><?php _e('Interfejs', 'ai-chat-assistant'); ?></h3>
-                    <div class="aica-setting-field aica-checkbox-field">
-                        <input type="checkbox" id="aica-dark-mode" name="aica-dark-mode" <?php echo get_option('aica_dark_mode') ? 'checked' : ''; ?>>
-                        <label for="aica-dark-mode"><?php _e('Tryb ciemny', 'ai-chat-assistant'); ?></label>
-                    </div>
-                    
-                    <div class="aica-setting-field aica-checkbox-field">
-                        <input type="checkbox" id="aica-compact-view" name="aica-compact-view" <?php echo get_option('aica_compact_view') ? 'checked' : ''; ?>>
-                        <label for="aica-compact-view"><?php _e('Widok kompaktowy', 'ai-chat-assistant'); ?></label>
-                    </div>
+            <!-- Informacje o aktualnie wybranym modelu -->
+            <div class="aica-model-info-sidebar">
+                <h4><?php _e('Informacje o modelu', 'ai-chat-assistant'); ?></h4>
+                <p>
+                    <?php _e('Aktualnie używany:', 'ai-chat-assistant'); ?> 
+                    <strong id="aica-model-name"><?php echo esc_html(get_option('aica_claude_model', 'claude-3-haiku-20240307')); ?></strong>
+                </p>
+                <p class="aica-help-text"><?php _e('Model można zmienić w ustawieniach globalnych', 'ai-chat-assistant'); ?></p>
+                <a href="<?php echo admin_url('admin.php?page=ai-chat-assistant-settings'); ?>" class="aica-button-sm">
+                    <?php _e('Przejdź do ustawień', 'ai-chat-assistant'); ?>
+                </a>
+            </div>
+            
+            <div class="aica-setting-group">
+                <h4><?php _e('Wygląd interfejsu', 'ai-chat-assistant'); ?></h4>
+                <div class="aica-setting-field aica-checkbox-field">
+                    <input type="checkbox" id="aica-dark-mode" name="aica-dark-mode" <?php echo get_option('aica_dark_mode') ? 'checked' : ''; ?>>
+                    <label for="aica-dark-mode"><?php _e('Tryb ciemny', 'ai-chat-assistant'); ?></label>
                 </div>
                 
-                <div class="aica-setting-group">
-                    <h3><?php _e('Model AI', 'ai-chat-assistant'); ?></h3>
-                    <div class="aica-setting-field">
-                        <label for="aica-model"><?php _e('Wybierz model', 'ai-chat-assistant'); ?></label>
-                        <select id="aica-model" name="aica-model">
-                            <option value="claude-3-opus-20240229" <?php selected(get_option('aica_claude_model', 'claude-3-haiku-20240307'), 'claude-3-opus-20240229'); ?>><?php _e('Claude 3 Opus - Najwyższa jakość', 'ai-chat-assistant'); ?></option>
-                            <option value="claude-3-sonnet-20240229" <?php selected(get_option('aica_claude_model', 'claude-3-haiku-20240307'), 'claude-3-sonnet-20240229'); ?>><?php _e('Claude 3 Sonnet - Zrównoważony', 'ai-chat-assistant'); ?></option>
-                            <option value="claude-3-haiku-20240307" <?php selected(get_option('aica_claude_model', 'claude-3-haiku-20240307'), 'claude-3-haiku-20240307'); ?>><?php _e('Claude 3 Haiku - Szybki', 'ai-chat-assistant'); ?></option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="aica-setting-group">
-                    <h3><?php _e('Zaawansowane', 'ai-chat-assistant'); ?></h3>
-                    <div class="aica-setting-field">
-                        <label for="aica-max-tokens"><?php _e('Maksymalna długość odpowiedzi', 'ai-chat-assistant'); ?></label>
-                        <div class="aica-slider-container">
-                            <input type="range" id="aica-max-tokens" name="aica-max-tokens" 
-                                min="1000" max="10000" step="1000" 
-                                value="<?php echo esc_attr(get_option('aica_max_tokens', 4000)); ?>">
-                            <span class="aica-slider-value" id="aica-max-tokens-value"><?php echo esc_html(get_option('aica_max_tokens', 4000)); ?></span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="aica-settings-actions">
-                    <button type="button" id="aica-save-settings" class="aica-button aica-button-primary"><?php _e('Zapisz ustawienia', 'ai-chat-assistant'); ?></button>
+                <div class="aica-setting-field aica-checkbox-field">
+                    <input type="checkbox" id="aica-compact-view" name="aica-compact-view" <?php echo get_option('aica_compact_view') ? 'checked' : ''; ?>>
+                    <label for="aica-compact-view"><?php _e('Widok kompaktowy', 'ai-chat-assistant'); ?></label>
                 </div>
             </div>
         </div>

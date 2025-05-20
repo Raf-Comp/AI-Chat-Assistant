@@ -32,6 +32,9 @@
         // Wczytanie listy repozytoriów
         loadRepositories();
         
+        // Wyświetlenie aktualnie wybranego modelu (pobieranego z globalnych ustawień)
+        $('#aica-model-name').text(aica_data.settings.claude_model || 'claude-3-haiku-20240307');
+        
         console.log('AI Chat Assistant zainicjalizowany');
     }
     

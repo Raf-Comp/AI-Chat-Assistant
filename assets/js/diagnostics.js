@@ -297,6 +297,11 @@ jQuery(document).ready(function($) {
         const button = $('#repair-database');
         const originalHtml = button.html();
         
+        // Dodajemy komunikaty debugujące
+        console.log('Rozpoczynam naprawę bazy danych');
+        console.log('Nonce:', aica_diagnostics_data.nonce);
+        console.log('URL:', ajaxurl);
+        
         // Show loading state
         button.html('<span class="aica-spinner"></span>').prop('disabled', true);
         
@@ -309,6 +314,7 @@ jQuery(document).ready(function($) {
                 nonce: aica_diagnostics_data.nonce
             },
             success: function(response) {
+                console.log('Odpowiedź serwera:', response);
                 // Restore button state
                 button.html(originalHtml).prop('disabled', false);
                 
@@ -323,10 +329,13 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function(xhr, status, error) {
+                console.error('Błąd AJAX:', xhr.responseText);
+                console.error('Status:', status);
+                console.error('Error:', error);
+                
                 // Restore button state
                 button.html(originalHtml).prop('disabled', false);
                 showNotification('error', 'Wystąpił błąd podczas wykonywania żądania: ' + error);
-                console.error('AJAX Error:', xhr.responseText);
                 
                 // Spróbujmy automatycznie odświeżyć stronę, być może tabele zostały naprawione pomimo błędu
                 setTimeout(function() {

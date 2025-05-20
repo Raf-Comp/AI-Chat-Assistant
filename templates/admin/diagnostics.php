@@ -8,6 +8,15 @@
 if (!defined('ABSPATH')) {
     exit; // Bezpośredni dostęp zabroniony
 }
+
+// Ważne: Dodanie skryptu i danych nonce dla JavaScript
+$nonce = wp_create_nonce('aica_diagnostics_nonce');
+wp_enqueue_script('aica-diagnostics-script', AICA_PLUGIN_URL . 'assets/js/diagnostics.js', array('jquery'), AICA_VERSION, true);
+wp_localize_script('aica-diagnostics-script', 'aica_diagnostics_data', array(
+    'nonce' => $nonce,
+    'ajax_url' => admin_url('admin-ajax.php'),
+    'chat_url' => admin_url('admin.php?page=ai-chat-assistant')
+));
 ?>
 
 <div class="wrap aica-diagnostics-container">

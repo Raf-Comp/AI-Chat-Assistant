@@ -298,9 +298,27 @@ class Main {
                 ]
             ]);
         } elseif ($page === 'ai-chat-assistant') {
-            // Strona główna czatu
-            wp_enqueue_style('aica-chat-style', AICA_PLUGIN_URL . 'assets/css/chat.css', [], AICA_VERSION);
-            wp_enqueue_script('aica-chat-script', AICA_PLUGIN_URL . 'assets/js/chat.js', ['jquery'], AICA_VERSION, true);
+            // Strona główna czatu - zaktualizowana do nowego nowoczesnego wyglądu
+            wp_enqueue_style(
+                'aica-modern-chat',
+                AICA_PLUGIN_URL . 'assets/css/modern-chat.css',
+                [],
+                AICA_VERSION
+            );
+            wp_enqueue_script(
+                'aica-modern-chat',
+                AICA_PLUGIN_URL . 'assets/js/modern-chat.js',
+                ['jquery'],
+                AICA_VERSION,
+                true
+            );
+            
+            // Dodanie dashicons
+            wp_enqueue_style('dashicons');
+            
+            // Dodaj Prism.js dla podświetlania składni kodu
+            wp_enqueue_style('prism-css', AICA_PLUGIN_URL . 'assets/vendor/prism/prism.css', [], AICA_VERSION);
+            wp_enqueue_script('prism-js', AICA_PLUGIN_URL . 'assets/vendor/prism/prism.js', [], AICA_VERSION, true);
             
             // Skrypty ogólne dla administratora
             wp_enqueue_script(
@@ -311,20 +329,9 @@ class Main {
                 true
             );
             
-            wp_localize_script('aica-chat-script', 'aica_chat', [
-                'nonce' => wp_create_nonce('aica_nonce'),
+            // Zmieniamy również wp_localize_script aby używało naszego nowego skryptu
+            wp_localize_script('aica-modern-chat', 'aica_data', [
                 'ajax_url' => admin_url('admin-ajax.php'),
-                'i18n' => [
-                    'loading' => __('Ładowanie...', 'ai-chat-assistant'),
-                    'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
-                    'error' => __('Wystąpił błąd. Spróbuj ponownie.', 'ai-chat-assistant')
-                ]
-            ]);
-            
-            // Przekazanie danych do skryptu admin
-            wp_localize_script('aica-admin', 'aica_data', [
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'admin_url' => admin_url('admin-post.php'),
                 'nonce' => wp_create_nonce('aica_nonce'),
                 'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
                 'i18n' => [

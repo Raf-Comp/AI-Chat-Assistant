@@ -37,42 +37,75 @@ class ChatPage {
             true
         );
 
-        // Skrypt czatu
+        // Nowoczesny styl czatu
+        wp_enqueue_style(
+            'aica-modern-chat',
+            AICA_PLUGIN_URL . 'assets/css/modern-chat.css',
+            ['prism'],
+            AICA_VERSION
+        );
+
+        // Nowoczesny skrypt czatu
         wp_enqueue_script(
-            'aica-chat',
-            AICA_PLUGIN_URL . 'assets/js/chat.js',
+            'aica-modern-chat',
+            AICA_PLUGIN_URL . 'assets/js/modern-chat.js',
             ['jquery', 'prism'],
             AICA_VERSION,
             true
         );
 
-        // Style czatu
-        wp_enqueue_style(
-            'aica-chat',
-            AICA_PLUGIN_URL . 'assets/css/chat.css',
-            ['prism'],
-            AICA_VERSION
-        );
+        // Załadowanie dashicons z WP
+        wp_enqueue_style('dashicons');
+
+        // Pobierz dostępne modele z ustawień
+        $available_models = aica_get_option('claude_available_models', []);
+        if (empty($available_models)) {
+            // Domyślna lista modeli, jeśli nie ma zapisanych
+            $available_models = [
+                'claude-3.5-sonnet-20240620' => 'Claude 3.5 Sonnet (2024-06-20)',
+                'claude-3-opus-20240229' => 'Claude 3 Opus (2024-02-29)',
+                'claude-3-sonnet-20240229' => 'Claude 3 Sonnet (2024-02-29)',
+                'claude-3-haiku-20240307' => 'Claude 3 Haiku (2024-03-07)',
+            ];
+        }
 
         // Dane dla skryptu
         $current_user_id = get_current_user_id();
         $chat_sessions = $this->chat_service->get_user_sessions($current_user_id);
         $repositories = $this->repo_service->get_saved_repositories($current_user_id);
 
-        wp_localize_script('aica-chat', 'aica_chat_data', [
+        wp_localize_script('aica-modern-chat', 'aica_data', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('aica_nonce'),
             'sessions' => $chat_sessions,
             'repositories' => $repositories,
             'settings' => [
                 'claude_model' => get_option('aica_claude_model', 'claude-3-haiku-20240307'),
                 'max_tokens' => get_option('aica_max_tokens', 4000),
+                'available_models' => $available_models
             ]
         ]);
     }
 
     public function render() {
         // Sprawdzenie, czy klucz API Claude jest skonfigurowany
-        $claude_api_key = get_option('aica_claude_api_key', '');
+        $claude_api_key = aica_get_option('claude_api_key', '');
         $api_configured = !empty($claude_api_key);
+
+        // Pobierz aktualnie wybrany model
+        $current_model = aica_get_option('claude_model', 'claude-3-haiku-20240307');
+        
+        // Pobierz dostępne modele z ustawień
+        $available_models = aica_get_option('claude_available_models', []);
+        if (empty($available_models)) {
+            // Domyślna lista modeli, jeśli nie ma zapisanych
+            $available_models = [
+                'claude-3.5-sonnet-20240620' => 'Claude 3.5 Sonnet (2024-06-20)',
+                'claude-3-opus-20240229' => 'Claude 3 Opus (2024-02-29)',
+                'claude-3-sonnet-20240229' => 'Claude 3 Sonnet (2024-02-29)',
+                'claude-3-haiku-20240307' => 'Claude 3 Haiku (2024-03-07)',
+            ];
+        }
 
         // Języki programowania wspierane przez podświetlanie składni
         $supported_languages = [

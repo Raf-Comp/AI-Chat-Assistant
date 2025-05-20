@@ -12,6 +12,7 @@ class ChatHandler {
         add_action('wp_ajax_aica_delete_session', [$this, 'delete_session']);
         add_action('wp_ajax_aica_rename_session', [$this, 'rename_session']);
         add_action('wp_ajax_aica_upload_file', [$this, 'upload_file']);
+        add_action('wp_ajax_aica_save_message', [$this, 'save_message']);
         add_action('wp_ajax_aica_create_conversation', [$this, 'create_conversation']);
         add_action('wp_ajax_aica_duplicate_conversation', [$this, 'duplicate_conversation']);
         add_action('wp_ajax_aica_export_conversation', [$this, 'export_conversation']);
@@ -36,8 +37,8 @@ class ChatHandler {
         }
         
         $message = sanitize_textarea_field($_POST['message']);
-        $conversation_id = isset($_POST['conversation_id']) ? intval($_POST['conversation_id']) : 0;
-        $user_id = aica_get_user_id();
+        $session_id = isset($_POST['session_id']) ? sanitize_text_field($_POST['session_id']) : '';
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -45,43 +46,46 @@ class ChatHandler {
             ]);
         }
         
-        // Sprawdź czy rozmowa istnieje i należy do użytkownika
-        if ($conversation_id > 0) {
-            if (!$this->user_owns_conversation($user_id, $conversation_id)) {
+        // Sprawdź czy sesja istnieje i należy do użytkownika
+        if (!empty($session_id)) {
+            if (!$this->user_owns_session($user_id, $session_id)) {
                 wp_send_json_error([
-                    'message' => __('Nie masz dostępu do tej rozmowy.', 'ai-chat-assistant')
+                    'message' => __('Nie masz dostępu do tej sesji.', 'ai-chat-assistant')
                 ]);
             }
         } else {
-            // Utwórz nową rozmowę
-            $title = $this->generate_conversation_title($message);
-            $conversation_id = $this->create_new_conversation($user_id, $title);
+            // Utwórz nową sesję
+            $title = __('Nowa rozmowa', 'ai-chat-assistant');
+            $session_id = $this->create_new_session($user_id, $title);
             
-            if (!$conversation_id) {
+            if (!$session_id) {
                 wp_send_json_error([
-                    'message' => __('Nie udało się utworzyć nowej rozmowy.', 'ai-chat-assistant')
+                    'message' => __('Nie udało się utworzyć nowej sesji.', 'ai-chat-assistant')
                 ]);
             }
         }
         
-        // Dodanie wiadomości użytkownika do rozmowy
-        $message_id = $this->add_message_to_conversation($conversation_id, 'user', $message);
+        // Pobierz informacje o kontekście
+        $context = isset($_POST['context']) ? $_POST['context'] : null;
+        $context_info = '';
         
-        if (!$message_id) {
-            wp_send_json_error([
-                'message' => __('Nie udało się zapisać wiadomości.', 'ai-chat-assistant')
-            ]);
-        }
-        
-        // Pobierz historię konwersacji
-        $history = $this->get_conversation_messages_by_id($conversation_id);
-        $messages_for_api = [];
-        
-        foreach ($history as $msg) {
-            $messages_for_api[] = [
-                'role' => $msg['role'],
-                'content' => $msg['content']
-            ];
+        if ($context && isset($context['repositoryId']) && isset($context['filePath'])) {
+            $repo_id = intval($context['repositoryId']);
+            $file_path = sanitize_text_field($context['filePath']);
+            
+            // Tutaj możesz dodać kod do pobierania zawartości pliku z repozytorium
+            $repo_service = new \AICA\Services\RepositoryService();
+            $file_content = $repo_service->get_file_content($repo_id, $file_path);
+            
+            if ($file_content) {
+                $context_info = sprintf(
+                    __('Kontekst: Plik %s z repozytorium.', 'ai-chat-assistant'),
+                    $file_path
+                );
+                
+                // Dodaj zawartość pliku do wiadomości
+                $message = $context_info . "\n\n" . $message;
+            }
         }
         
         // Pobranie ustawień Claude
@@ -96,9 +100,33 @@ class ChatHandler {
             ]);
         }
         
+        // Pobierz historię rozmowy
+        $history = $this->get_session_messages($session_id);
+        $messages_for_api = [];
+        
+        foreach ($history as $msg) {
+            if ($msg['type'] === 'user') {
+                $messages_for_api[] = [
+                    'role' => 'user',
+                    'content' => $msg['content']
+                ];
+            } elseif ($msg['type'] === 'assistant') {
+                $messages_for_api[] = [
+                    'role' => 'assistant',
+                    'content' => $msg['content']
+                ];
+            }
+        }
+        
+        // Dodanie aktualnej wiadomości użytkownika
+        $messages_for_api[] = [
+            'role' => 'user',
+            'content' => $message
+        ];
+        
         // Wysłanie wiadomości do Claude
         $claude_client = new \AICA\API\ClaudeClient($api_key);
-        $response = $claude_client->send_message($message, $messages_for_api, $model, $max_tokens, $temperature);
+        $response = $claude_client->send_message($messages_for_api, $model, $max_tokens, $temperature);
         
         if (!$response['success']) {
             wp_send_json_error([
@@ -106,31 +134,23 @@ class ChatHandler {
             ]);
         }
         
-        // Dodanie odpowiedzi Claude do rozmowy
-        $assistant_message_id = $this->add_message_to_conversation(
-            $conversation_id,
-            'assistant',
-            $response['message'],
-            $model,
-            $response['tokens_used'] ?? 0
-        );
+        // Zapisanie wiadomości do bazy danych
+        $this->add_message_to_session($session_id, 'user', $message);
+        $this->add_message_to_session($session_id, 'assistant', $response['message']);
         
-        if (!$assistant_message_id) {
-            wp_send_json_error([
-                'message' => __('Nie udało się zapisać odpowiedzi asystenta.', 'ai-chat-assistant')
-            ]);
+        // Jeżeli to nowa rozmowa, zaktualizuj tytuł na podstawie pierwszej wymiany wiadomości
+        if (count($history) <= 2) {
+            $new_title = $this->generate_session_title($message, $response['message']);
+            $this->update_session_title($session_id, $new_title);
         }
         
-        // Jeżeli to nowa rozmowa, aktualizuj tytuł na podstawie pierwszej odpowiedzi
-        if (count($messages_for_api) <= 2) {
-            $new_title = $this->generate_conversation_title($message, $response['message']);
-            $this->update_conversation_title($conversation_id, $new_title);
-        }
+        // Aktualizuj czas ostatniej modyfikacji sesji
+        $this->update_session_time($session_id);
         
         // Zwróć odpowiedź
         wp_send_json_success([
-            'message' => $response['message'],
-            'conversation_id' => $conversation_id,
+            'content' => $response['message'],
+            'session_id' => $session_id,
             'model' => $model,
             'tokens_used' => $response['tokens_used'] ?? 0
         ]);
@@ -147,7 +167,7 @@ class ChatHandler {
             ]);
         }
         
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -193,8 +213,7 @@ class ChatHandler {
      */
     public function get_chat_history() {
         // Sprawdzenie nonce
-        $nonce_key = isset($_POST['nonce_key']) ? sanitize_text_field($_POST['nonce_key']) : 'aica_nonce';
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], $nonce_key)) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_nonce')) {
             wp_send_json_error([
                 'message' => __('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant')
             ]);
@@ -208,7 +227,7 @@ class ChatHandler {
         }
         
         $session_id = sanitize_text_field($_POST['session_id']);
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -267,14 +286,13 @@ class ChatHandler {
      */
     public function get_sessions_list() {
         // Sprawdzenie nonce
-        $nonce_key = isset($_POST['nonce_key']) ? sanitize_text_field($_POST['nonce_key']) : 'aica_nonce';
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], $nonce_key)) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_nonce')) {
             wp_send_json_error([
                 'message' => __('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant')
             ]);
         }
         
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -293,13 +311,14 @@ class ChatHandler {
         
         // Pobierz sesje z liczbą wiadomości
         $sessions = $wpdb->get_results($wpdb->prepare(
-            "SELECT s.*, COUNT(m.id) AS message_count 
-             FROM $sessions_table AS s 
-             LEFT JOIN $messages_table AS m ON s.session_id = m.session_id 
-             WHERE s.user_id = %d 
-             GROUP BY s.session_id 
-             ORDER BY s.updated_at DESC 
-             LIMIT %d OFFSET %d",
+            "SELECT s.*, COUNT(m.id) AS message_count, 
+            (SELECT content FROM $messages_table WHERE session_id = s.session_id AND type = 'user' ORDER BY created_at ASC LIMIT 1) AS preview
+            FROM $sessions_table AS s 
+            LEFT JOIN $messages_table AS m ON s.session_id = m.session_id 
+            WHERE s.user_id = %d 
+            GROUP BY s.session_id 
+            ORDER BY s.updated_at DESC 
+            LIMIT %d OFFSET %d",
             $user_id, $per_page, $offset
         ), ARRAY_A);
         
@@ -308,6 +327,15 @@ class ChatHandler {
             "SELECT COUNT(*) FROM $sessions_table WHERE user_id = %d",
             $user_id
         ));
+        
+        // Przetwórz podglądy, aby nie były za długie
+        foreach ($sessions as &$session) {
+            if (!empty($session['preview'])) {
+                $session['preview'] = wp_trim_words($session['preview'], 10, '...');
+            } else {
+                $session['preview'] = __('Nowa rozmowa', 'ai-chat-assistant');
+            }
+        }
         
         wp_send_json_success([
             'sessions' => $sessions,
@@ -339,7 +367,7 @@ class ChatHandler {
         }
         
         $session_id = sanitize_text_field($_POST['session_id']);
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -372,8 +400,7 @@ class ChatHandler {
      */
     public function delete_session() {
         // Sprawdzenie nonce
-        $nonce_key = isset($_POST['nonce_key']) ? sanitize_text_field($_POST['nonce_key']) : 'aica_nonce';
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], $nonce_key)) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_nonce')) {
             wp_send_json_error([
                 'message' => __('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant')
             ]);
@@ -387,7 +414,7 @@ class ChatHandler {
         }
         
         $session_id = sanitize_text_field($_POST['session_id']);
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -463,7 +490,7 @@ class ChatHandler {
         
         $session_id = sanitize_text_field($_POST['session_id']);
         $title = sanitize_text_field($_POST['title']);
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -527,7 +554,7 @@ class ChatHandler {
         }
         
         $file = $_FILES['file'];
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -586,6 +613,80 @@ class ChatHandler {
     }
     
     /**
+     * Zapisywanie wiadomości po stronie klienta
+     */
+    public function save_message() {
+        // Sprawdzenie nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_nonce')) {
+            wp_send_json_error([
+                'message' => __('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant')
+            ]);
+        }
+        
+        // Sprawdzenie danych
+        if (!isset($_POST['session_id']) || empty($_POST['session_id'])) {
+            wp_send_json_error([
+                'message' => __('Nie podano ID sesji.', 'ai-chat-assistant')
+            ]);
+        }
+        
+        if (!isset($_POST['user_message']) || empty($_POST['user_message'])) {
+            wp_send_json_error([
+                'message' => __('Wiadomość użytkownika nie może być pusta.', 'ai-chat-assistant')
+            ]);
+        }
+        
+        if (!isset($_POST['assistant_response']) || empty($_POST['assistant_response'])) {
+            wp_send_json_error([
+                'message' => __('Odpowiedź asystenta nie może być pusta.', 'ai-chat-assistant')
+            ]);
+        }
+        
+        $session_id = sanitize_text_field($_POST['session_id']);
+        $user_message = sanitize_textarea_field($_POST['user_message']);
+        $assistant_response = wp_kses_post($_POST['assistant_response']);
+        $user_id = get_current_user_id();
+        
+        if (!$user_id) {
+            wp_send_json_error([
+                'message' => __('Nie znaleziono użytkownika.', 'ai-chat-assistant')
+            ]);
+        }
+        
+        // Sprawdź, czy sesja należy do użytkownika
+        if (!$this->user_owns_session($user_id, $session_id)) {
+            wp_send_json_error([
+                'message' => __('Nie masz dostępu do tej sesji.', 'ai-chat-assistant')
+            ]);
+        }
+        
+        // Dodanie wiadomości do bazy danych
+        $this->add_message_to_session($session_id, 'user', $user_message);
+        $this->add_message_to_session($session_id, 'assistant', $assistant_response);
+        
+        // Aktualizuj czas ostatniej modyfikacji sesji
+        $this->update_session_time($session_id);
+        
+        // Sprawdzenie czy session_id ma już tytuł różny od "Nowa rozmowa"
+        global $wpdb;
+        $sessions_table = $wpdb->prefix . 'aica_sessions';
+        $session_title = $wpdb->get_var($wpdb->prepare(
+            "SELECT title FROM $sessions_table WHERE session_id = %s",
+            $session_id
+        ));
+        
+        // Jeśli tytuł to "Nowa rozmowa", wygeneruj nowy tytuł z pierwszej wiadomości
+        if ($session_title === __('Nowa rozmowa', 'ai-chat-assistant')) {
+            $new_title = $this->generate_session_title($user_message);
+            $this->update_session_title($session_id, $new_title);
+        }
+        
+        wp_send_json_success([
+            'message' => __('Wiadomość została zapisana.', 'ai-chat-assistant')
+        ]);
+    }
+    
+    /**
      * Tworzenie nowej rozmowy
      */
     public function create_conversation() {
@@ -597,7 +698,7 @@ class ChatHandler {
         }
         
         $title = isset($_POST['title']) ? sanitize_text_field($_POST['title']) : __('Nowa rozmowa', 'ai-chat-assistant');
-        $user_id = aica_get_user_id();
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -605,17 +706,17 @@ class ChatHandler {
             ]);
         }
         
-        // Utworzenie nowej rozmowy
-        $conversation_id = $this->create_new_conversation($user_id, $title);
+        // Utworzenie nowej rozmowy/sesji
+        $session_id = $this->create_new_session($user_id, $title);
         
-        if (!$conversation_id) {
+        if (!$session_id) {
             wp_send_json_error([
                 'message' => __('Nie udało się utworzyć nowej rozmowy.', 'ai-chat-assistant')
             ]);
         }
         
         wp_send_json_success([
-            'conversation_id' => $conversation_id,
+            'session_id' => $session_id,
             'title' => $title
         ]);
     }
@@ -625,21 +726,21 @@ class ChatHandler {
      */
     public function duplicate_conversation() {
         // Sprawdzenie nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_history_nonce')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_nonce')) {
             wp_send_json_error([
                 'message' => __('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant')
             ]);
         }
         
-        // Sprawdzenie ID rozmowy
-        if (!isset($_POST['conversation_id']) || empty($_POST['conversation_id'])) {
+        // Sprawdzenie ID sesji
+        if (!isset($_POST['session_id']) || empty($_POST['session_id'])) {
             wp_send_json_error([
-                'message' => __('Nie podano ID rozmowy.', 'ai-chat-assistant')
+                'message' => __('Nie podano ID sesji.', 'ai-chat-assistant')
             ]);
         }
         
-        $conversation_id = intval($_POST['conversation_id']);
-        $user_id = aica_get_user_id();
+        $session_id = sanitize_text_field($_POST['session_id']);
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -647,73 +748,98 @@ class ChatHandler {
             ]);
         }
         
-        // Sprawdź czy użytkownik ma dostęp do tej rozmowy
-        if (!$this->user_owns_conversation($user_id, $conversation_id)) {
+        // Sprawdź czy użytkownik ma dostęp do tej sesji
+        if (!$this->user_owns_session($user_id, $session_id)) {
             wp_send_json_error([
-                'message' => __('Nie masz dostępu do tej rozmowy.', 'ai-chat-assistant')
+                'message' => __('Nie masz dostępu do tej sesji.', 'ai-chat-assistant')
             ]);
         }
         
-        // Pobierz dane rozmowy
-        $conversation = $this->get_conversation_by_id($conversation_id);
-        $messages = $this->get_conversation_messages_by_id($conversation_id);
+        // Pobierz dane sesji
+        global $wpdb;
+        $sessions_table = $wpdb->prefix . 'aica_sessions';
+        $session = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $sessions_table WHERE session_id = %s",
+            $session_id
+        ), ARRAY_A);
         
-        if (!$conversation) {
+        if (!$session) {
             wp_send_json_error([
-                'message' => __('Nie znaleziono rozmowy.', 'ai-chat-assistant')
+                'message' => __('Nie znaleziono sesji.', 'ai-chat-assistant')
             ]);
         }
         
-        // Duplikowanie rozmowy
-        $new_title = sprintf(__('Kopia: %s', 'ai-chat-assistant'), $conversation['title']);
-        $new_conversation_id = $this->create_new_conversation($user_id, $new_title);
+        // Duplikowanie sesji
+        $new_title = sprintf(__('Kopia: %s', 'ai-chat-assistant'), $session['title']);
+        $new_session_id = uniqid('session_');
+        $now = current_time('mysql');
         
-        if (!$new_conversation_id) {
+        $result = $wpdb->insert(
+            $sessions_table,
+            [
+                'session_id' => $new_session_id,
+                'user_id' => $user_id,
+                'title' => $new_title,
+                'created_at' => $now,
+                'updated_at' => $now
+            ],
+            ['%s', '%d', '%s', '%s', '%s']
+        );
+        
+        if (!$result) {
             wp_send_json_error([
-                'message' => __('Nie udało się zduplikować rozmowy.', 'ai-chat-assistant')
+                'message' => __('Nie udało się zduplikować sesji.', 'ai-chat-assistant')
             ]);
         }
         
         // Duplikowanie wiadomości
+        $messages_table = $wpdb->prefix . 'aica_messages';
+        $messages = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $messages_table WHERE session_id = %s ORDER BY created_at ASC",
+            $session_id
+        ), ARRAY_A);
+        
         foreach ($messages as $message) {
-            $this->add_message_to_conversation(
-                $new_conversation_id,
-                $message['role'],
-                $message['content'],
-                $message['model'],
-                isset($message['tokens']) ? $message['tokens'] : 0
+            $wpdb->insert(
+                $messages_table,
+                [
+                    'session_id' => $new_session_id,
+                    'type' => $message['type'],
+                    'content' => $message['content'],
+                    'created_at' => $now
+                ],
+                ['%s', '%s', '%s', '%s']
             );
         }
         
         wp_send_json_success([
-            'message' => __('Rozmowa została zduplikowana.', 'ai-chat-assistant'),
-            'conversation_id' => $new_conversation_id,
+            'message' => __('Sesja została zduplikowana.', 'ai-chat-assistant'),
+            'session_id' => $new_session_id,
             'title' => $new_title
         ]);
-
-        }
+    }
     
     /**
      * Eksportowanie rozmowy do pliku
      */
     public function export_conversation() {
         // Sprawdzenie nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_history_nonce')) {
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'aica_nonce')) {
             wp_send_json_error([
                 'message' => __('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant')
             ]);
         }
         
-        // Sprawdzenie ID rozmowy
-        if (!isset($_POST['conversation_id']) || empty($_POST['conversation_id'])) {
+        // Sprawdzenie ID sesji
+        if (!isset($_POST['session_id']) || empty($_POST['session_id'])) {
             wp_send_json_error([
-                'message' => __('Nie podano ID rozmowy.', 'ai-chat-assistant')
+                'message' => __('Nie podano ID sesji.', 'ai-chat-assistant')
             ]);
         }
         
-        $conversation_id = intval($_POST['conversation_id']);
-        $format = isset($_POST['format']) ? sanitize_text_field($_POST['format']) : 'json';
-        $user_id = aica_get_user_id();
+        $session_id = sanitize_text_field($_POST['session_id']);
+        $format = isset($_POST['format']) ? sanitize_text_field($_POST['format']) : 'markdown';
+        $user_id = get_current_user_id();
         
         if (!$user_id) {
             wp_send_json_error([
@@ -721,206 +847,214 @@ class ChatHandler {
             ]);
         }
         
-        // Sprawdź czy użytkownik ma dostęp do tej rozmowy
-        if (!$this->user_owns_conversation($user_id, $conversation_id)) {
+        // Sprawdź czy użytkownik ma dostęp do tej sesji
+        if (!$this->user_owns_session($user_id, $session_id)) {
             wp_send_json_error([
-                'message' => __('Nie masz dostępu do tej rozmowy.', 'ai-chat-assistant')
+                'message' => __('Nie masz dostępu do tej sesji.', 'ai-chat-assistant')
             ]);
         }
         
-        // Pobierz dane rozmowy
-        $conversation = $this->get_conversation_by_id($conversation_id);
-        $messages = $this->get_conversation_messages_by_id($conversation_id);
+        // Pobierz dane sesji
+        global $wpdb;
+        $sessions_table = $wpdb->prefix . 'aica_sessions';
+        $session = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $sessions_table WHERE session_id = %s",
+            $session_id
+        ), ARRAY_A);
         
-        if (!$conversation) {
+        if (!$session) {
             wp_send_json_error([
-                'message' => __('Nie znaleziono rozmowy.', 'ai-chat-assistant')
+                'message' => __('Nie znaleziono sesji.', 'ai-chat-assistant')
             ]);
         }
         
-        // Przygotuj dane do eksportu
-        $export_data = [
-            'conversation' => $conversation,
-            'messages' => $messages
-        ];
+        // Pobierz wiadomości
+        $messages_table = $wpdb->prefix . 'aica_messages';
+        $messages = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $messages_table WHERE session_id = %s ORDER BY created_at ASC",
+            $session_id
+        ), ARRAY_A);
         
-        // Wygeneruj plik w zależności od formatu
-        $file_content = '';
-        $file_name = sanitize_title($conversation['title']) . '_' . date('Y-m-d');
+        // Wygeneruj odpowiedni format
+        $content = '';
+        $file_name = sanitize_title($session['title']) . '_' . date('Y-m-d');
+        $mime_type = '';
         
         switch ($format) {
-            case 'json':
-                $file_content = json_encode($export_data, JSON_PRETTY_PRINT);
-                $file_name .= '.json';
-                $content_type = 'application/json';
-                break;
-                
-            case 'txt':
-                $file_content = $this->format_conversation_as_text($conversation, $messages);
-                $file_name .= '.txt';
-                $content_type = 'text/plain';
+            case 'markdown':
+            case 'md':
+                $content = $this->format_conversation_as_markdown($session, $messages);
+                $file_name .= '.md';
+                $mime_type = 'text/markdown';
                 break;
                 
             case 'html':
-                $file_content = $this->format_conversation_as_html($conversation, $messages);
+                $content = $this->format_conversation_as_html($session, $messages);
                 $file_name .= '.html';
-                $content_type = 'text/html';
+                $mime_type = 'text/html';
                 break;
                 
-            case 'markdown':
-            case 'md':
-                $file_content = $this->format_conversation_as_markdown($conversation, $messages);
-                $file_name .= '.md';
-                $content_type = 'text/markdown';
+            case 'json':
+                $data = [
+                    'title' => $session['title'],
+                    'created_at' => $session['created_at'],
+                    'updated_at' => $session['updated_at'],
+                    'messages' => []
+                ];
+                
+                foreach ($messages as $message) {
+                    $data['messages'][] = [
+                        'type' => $message['type'],
+                        'content' => $message['content'],
+                        'created_at' => $message['created_at']
+                    ];
+                }
+                
+                $content = json_encode($data, JSON_PRETTY_PRINT);
+                $file_name .= '.json';
+                $mime_type = 'application/json';
                 break;
                 
+            case 'txt':
             default:
-                wp_send_json_error([
-                    'message' => __('Nieobsługiwany format eksportu.', 'ai-chat-assistant')
-                ]);
+                $content = $this->format_conversation_as_text($session, $messages);
+                $file_name .= '.txt';
+                $mime_type = 'text/plain';
+                break;
         }
         
-        // Wyślij dane pliku
         wp_send_json_success([
             'file_name' => $file_name,
-            'file_content' => base64_encode($file_content),
-            'content_type' => $content_type
+            'content' => base64_encode($content),
+            'mime_type' => $mime_type
         ]);
     }
     
-    // Metody pomocnicze
-    
     /**
-     * Sprawdza czy użytkownik ma dostęp do danej rozmowy
+     * Sprawdza czy użytkownik jest właścicielem sesji
      */
-    private function user_owns_conversation($user_id, $conversation_id) {
+    private function user_owns_session($user_id, $session_id) {
         global $wpdb;
-        $table = $wpdb->prefix . 'aica_conversations';
+        $sessions_table = $wpdb->prefix . 'aica_sessions';
         
-        $result = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table WHERE id = %d AND user_id = %d",
-            $conversation_id, $user_id
+        $count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $sessions_table WHERE session_id = %s AND user_id = %d",
+            $session_id, $user_id
         ));
         
-        return $result > 0;
+        return (int)$count > 0;
     }
     
     /**
-     * Pobiera wiadomości rozmowy
+     * Tworzy nową sesję
      */
-    private function get_conversation_messages_by_id($conversation_id) {
+    private function create_new_session($user_id, $title) {
         global $wpdb;
-        $table = $wpdb->prefix . 'aica_messages';
-        
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT * FROM $table WHERE conversation_id = %d ORDER BY created_at ASC",
-            $conversation_id
-        ), ARRAY_A);
-    }
-    
-    /**
-     * Pobiera dane rozmowy na podstawie ID
-     */
-    private function get_conversation_by_id($conversation_id) {
-        global $wpdb;
-        $table = $wpdb->prefix . 'aica_conversations';
-        
-        return $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table WHERE id = %d",
-            $conversation_id
-        ), ARRAY_A);
-    }
-    
-    /**
-     * Tworzy nową rozmowę
-     */
-    private function create_new_conversation($user_id, $title) {
-        global $wpdb;
-        $table = $wpdb->prefix . 'aica_conversations';
+        $sessions_table = $wpdb->prefix . 'aica_sessions';
         $now = current_time('mysql');
         
+        $session_id = uniqid('session_');
+        
         $result = $wpdb->insert(
-            $table,
+            $sessions_table,
             [
+                'session_id' => $session_id,
                 'user_id' => $user_id,
                 'title' => $title,
                 'created_at' => $now,
                 'updated_at' => $now
             ],
-            ['%d', '%s', '%s', '%s']
+            ['%s', '%d', '%s', '%s', '%s']
         );
         
-        if (!$result) {
-            return false;
+        if ($result) {
+            return $session_id;
         }
         
-        return $wpdb->insert_id;
+        return false;
     }
     
     /**
-     * Dodaje wiadomość do rozmowy
+     * Dodaje wiadomość do sesji
      */
-    private function add_message_to_conversation($conversation_id, $role, $content, $model = '', $tokens = 0) {
+    private function add_message_to_session($session_id, $type, $content) {
         global $wpdb;
-        $table = $wpdb->prefix . 'aica_messages';
+        $messages_table = $wpdb->prefix . 'aica_messages';
         $now = current_time('mysql');
         
-        // Aktualizacja czasu ostatniej modyfikacji rozmowy
-        $conversations_table = $wpdb->prefix . 'aica_conversations';
-        $wpdb->update(
-            $conversations_table,
-            ['updated_at' => $now],
-            ['id' => $conversation_id],
-            ['%s'],
-            ['%d']
-        );
-        
         $result = $wpdb->insert(
-            $table,
+            $messages_table,
             [
-                'conversation_id' => $conversation_id,
-                'role' => $role,
+                'session_id' => $session_id,
+                'type' => $type,
                 'content' => $content,
-                'model' => $model,
-                'tokens' => $tokens,
                 'created_at' => $now
             ],
-            ['%d', '%s', '%s', '%s', '%d', '%s']
+            ['%s', '%s', '%s', '%s']
         );
         
-        if (!$result) {
-            return false;
-        }
-        
-        return $wpdb->insert_id;
+        return $result ? $wpdb->insert_id : false;
     }
     
     /**
-     * Aktualizuje tytuł rozmowy
+     * Pobiera wiadomości z sesji
      */
-    private function update_conversation_title($conversation_id, $title) {
+    private function get_session_messages($session_id) {
         global $wpdb;
-        $table = $wpdb->prefix . 'aica_conversations';
+        $messages_table = $wpdb->prefix . 'aica_messages';
+        
+        $messages = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $messages_table WHERE session_id = %s ORDER BY created_at ASC",
+            $session_id
+        ), ARRAY_A);
+        
+        return $messages;
+    }
+    
+    /**
+     * Aktualizuje tytuł sesji
+     */
+    private function update_session_title($session_id, $title) {
+        global $wpdb;
+        $sessions_table = $wpdb->prefix . 'aica_sessions';
         
         $result = $wpdb->update(
-            $table,
+            $sessions_table,
             ['title' => $title],
-            ['id' => $conversation_id],
+            ['session_id' => $session_id],
             ['%s'],
-            ['%d']
+            ['%s']
         );
         
         return $result !== false;
     }
     
     /**
-     * Generuje tytuł rozmowy na podstawie pierwszej wiadomości i odpowiedzi
+     * Aktualizuje czas ostatniej modyfikacji sesji
      */
-    private function generate_conversation_title($message, $response = '') {
+    private function update_session_time($session_id) {
+        global $wpdb;
+        $sessions_table = $wpdb->prefix . 'aica_sessions';
+        $now = current_time('mysql');
+        
+        $wpdb->update(
+            $sessions_table,
+            ['updated_at' => $now],
+            ['session_id' => $session_id],
+            ['%s'],
+            ['%s']
+        );
+    }
+    
+    /**
+     * Generuje tytuł sesji na podstawie wiadomości
+     */
+    private function generate_session_title($message, $response = '') {
         // Skrócenie wiadomości do pierwszych 50 znaków
         $title = substr($message, 0, 50);
         
-        // Usunięcie znaków nowej linii
+        // Usunięcie znaków nowej linii i HTML
+        $title = strip_tags($title);
         $title = str_replace(["\r", "\n"], ' ', $title);
         
         // Dodanie wielokropka, jeśli wiadomość była dłuższa
@@ -934,13 +1068,13 @@ class ChatHandler {
     /**
      * Formatuje rozmowę jako tekst
      */
-    private function format_conversation_as_text($conversation, $messages) {
-        $output = "Tytuł: " . $conversation['title'] . "\n";
-        $output .= "Data: " . $conversation['created_at'] . "\n\n";
+    private function format_conversation_as_text($session, $messages) {
+        $output = "Tytuł: " . $session['title'] . "\n";
+        $output .= "Data: " . $session['created_at'] . "\n\n";
         
         foreach ($messages as $message) {
-            $role = $message['role'] === 'user' ? 'Użytkownik' : 'Claude';
-            $output .= "[$role]:\n" . $message['content'] . "\n\n";
+            $role = $message['type'] === 'user' ? 'Użytkownik' : 'Claude';
+            $output .= "[$role]:\n" . strip_tags($message['content']) . "\n\n";
         }
         
         return $output;
@@ -949,37 +1083,35 @@ class ChatHandler {
     /**
      * Formatuje rozmowę jako HTML
      */
-    private function format_conversation_as_html($conversation, $messages) {
+    private function format_conversation_as_html($session, $messages) {
         $output = "<!DOCTYPE html>\n<html>\n<head>\n";
         $output .= "<meta charset=\"UTF-8\">\n";
-        $output .= "<title>" . esc_html($conversation['title']) . "</title>\n";
+        $output .= "<title>" . esc_html($session['title']) . "</title>\n";
         $output .= "<style>\n";
         $output .= "body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }\n";
-        $output .= "h1 { color: #2271b1; }\n";
-        $output .= ".message { margin-bottom: 20px; padding: 15px; border-radius: 8px; }\n";
-        $output .= ".user { background-color: #f0f0f0; }\n";
-        $output .= ".assistant { background-color: #e6f3ff; }\n";
+        $output .= "h1 { color: #6366F1; }\n";
+        $output .= ".message { margin-bottom: 20px; padding: 15px; border-radius: 12px; }\n";
+        $output .= ".user { background-color: #EEF2FF; }\n";
+        $output .= ".assistant { background-color: #F8FAFC; }\n";
         $output .= ".role { font-weight: bold; margin-bottom: 5px; }\n";
         $output .= ".content { white-space: pre-wrap; }\n";
-        $output .= ".meta { color: #666; font-size: 14px; margin-top: 15px; }\n";
+        $output .= ".meta { color: #64748B; font-size: 14px; margin-top: 15px; }\n";
+        $output .= "pre { background-color: #1E293B; color: #F1F5F9; padding: 15px; border-radius: 8px; overflow-x: auto; }\n";
+        $output .= "code { font-family: 'Courier New', monospace; }\n";
         $output .= "</style>\n";
         $output .= "</head>\n<body>\n";
         
-        $output .= "<h1>" . esc_html($conversation['title']) . "</h1>\n";
-        $output .= "<p class=\"meta\">Data utworzenia: " . esc_html($conversation['created_at']) . "</p>\n";
+        $output .= "<h1>" . esc_html($session['title']) . "</h1>\n";
+        $output .= "<p class=\"meta\">Data utworzenia: " . esc_html($session['created_at']) . "</p>\n";
         
         foreach ($messages as $message) {
-            $role_class = $message['role'] === 'user' ? 'user' : 'assistant';
-            $role_name = $message['role'] === 'user' ? 'Użytkownik' : 'Claude';
+            $role_class = $message['type'] === 'user' ? 'user' : 'assistant';
+            $role_name = $message['type'] === 'user' ? 'Użytkownik' : 'Claude';
             
             $output .= "<div class=\"message {$role_class}\">\n";
             $output .= "<div class=\"role\">{$role_name}</div>\n";
-            $output .= "<div class=\"content\">" . nl2br(esc_html($message['content'])) . "</div>\n";
-            
-            if (!empty($message['model']) && $message['role'] === 'assistant') {
-                $output .= "<div class=\"meta\">Model: " . esc_html($message['model']) . "</div>\n";
-            }
-            
+            $output .= "<div class=\"content\">" . $message['content'] . "</div>\n";
+            $output .= "<div class=\"meta\">Czas: " . esc_html($message['created_at']) . "</div>\n";
             $output .= "</div>\n";
         }
         
@@ -991,18 +1123,31 @@ class ChatHandler {
     /**
      * Formatuje rozmowę jako Markdown
      */
-    private function format_conversation_as_markdown($conversation, $messages) {
-        $output = "# " . $conversation['title'] . "\n\n";
-        $output .= "Data utworzenia: " . $conversation['created_at'] . "\n\n";
+    private function format_conversation_as_markdown($session, $messages) {
+        $output = "# " . $session['title'] . "\n\n";
+        $output .= "Data utworzenia: " . $session['created_at'] . "\n\n";
         
         foreach ($messages as $message) {
-            $role = $message['role'] === 'user' ? 'Użytkownik' : 'Claude';
+            $role = $message['type'] === 'user' ? 'Użytkownik' : 'Claude';
             $output .= "## " . $role . "\n\n";
-            $output .= $message['content'] . "\n\n";
             
-            if (!empty($message['model']) && $message['role'] === 'assistant') {
-                $output .= "*Model: " . $message['model'] . "*\n\n";
-            }
+            // Konwertuj proste tagi HTML na markdown
+            $content = preg_replace('/<pre><code.*?>(.*?)<\/code><\/pre>/s', "```\n$1\n```", $message['content']);
+            $content = preg_replace('/<code>(.*?)<\/code>/s', '`$1`', $content);
+            $content = preg_replace('/<strong>(.*?)<\/strong>/s', '**$1**', $content);
+            $content = preg_replace('/<em>(.*?)<\/em>/s', '*$1*', $content);
+            $content = preg_replace('/<ul>(.*?)<\/ul>/s', "$1", $content);
+            $content = preg_replace('/<ol>(.*?)<\/ol>/s', "$1", $content);
+            $content = preg_replace('/<li>(.*?)<\/li>/s', "- $1\n", $content);
+            $content = preg_replace('/<a href="(.*?)".*?>(.*?)<\/a>/s', '[$2]($1)', $content);
+            $content = preg_replace('/<p>(.*?)<\/p>/s', "$1\n\n", $content);
+            $content = preg_replace('/<br\s*\/?>/s', "\n", $content);
+            
+            // Usuń inne tagi HTML
+            $content = strip_tags($content);
+            
+            $output .= $content . "\n\n";
+            $output .= "*Czas: " . $message['created_at'] . "*\n\n";
         }
         
         return $output;

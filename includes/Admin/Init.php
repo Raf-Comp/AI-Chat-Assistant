@@ -47,7 +47,18 @@ class Init {
         
         if ($aica_user_id) {
             // Aktualizuj czas ostatniego logowania
-            aica_update_user_last_login($aica_user_id);
+            // Używamy funkcji aica_update_user, aby zaktualizować dane użytkownika
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'aica_users';
+            
+            $wpdb->update(
+                $table_name,
+                ['last_login' => current_time('mysql')],
+                ['id' => $aica_user_id],
+                ['%s'],
+                ['%d']
+            );
+            
             aica_log('Zaktualizowano czas logowania użytkownika: ' . $user_login);
         } else {
             // Jeśli użytkownik nie istnieje w tabeli wtyczki, dodaj go
@@ -126,10 +137,14 @@ class Init {
         wp_localize_script('aica-admin', 'aica_data', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('aica_nonce'),
+            'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
             'i18n' => [
                 'error' => __('Błąd', 'ai-chat-assistant'),
                 'loading' => __('Ładowanie...', 'ai-chat-assistant'),
-                'sending' => __('Wysyłanie...', 'ai-chat-assistant')
+                'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
+                'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
+                'saved' => __('Zapisano', 'ai-chat-assistant'),
+                'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
             ]
         ]);
     }

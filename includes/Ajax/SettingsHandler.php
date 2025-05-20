@@ -18,6 +18,7 @@ class SettingsHandler {
             wp_send_json_error([
                 'message' => __('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant')
             ]);
+            return;
         }
         
         // Sprawdzenie uprawnień
@@ -25,37 +26,48 @@ class SettingsHandler {
             wp_send_json_error([
                 'message' => __('Nie masz wystarczających uprawnień.', 'ai-chat-assistant')
             ]);
+            return;
         }
+        
+        // Logowanie dla debugowania
+        aica_log('Rozpoczęto zapisywanie ustawień przez AJAX');
         
         // Przygotowanie opcji do zapisania
         $options = [
-            'claude_api_key' => sanitize_text_field($_POST['aica_claude_api_key'] ?? ''),
-            'claude_model' => sanitize_text_field($_POST['aica_claude_model'] ?? 'claude-3-haiku-20240307'),
-            'max_tokens' => intval($_POST['aica_max_tokens'] ?? 4000),
-            'temperature' => floatval($_POST['aica_temperature'] ?? 0.7),
+            'claude_api_key' => isset($_POST['aica_claude_api_key']) ? sanitize_text_field($_POST['aica_claude_api_key']) : '',
+            'claude_model' => isset($_POST['aica_claude_model']) ? sanitize_text_field($_POST['aica_claude_model']) : 'claude-3-haiku-20240307',
+            'max_tokens' => isset($_POST['aica_max_tokens']) ? intval($_POST['aica_max_tokens']) : 4000,
+            'temperature' => isset($_POST['aica_temperature']) ? floatval($_POST['aica_temperature']) : 0.7,
             
-            'github_token' => sanitize_text_field($_POST['aica_github_token'] ?? ''),
-            'gitlab_token' => sanitize_text_field($_POST['aica_gitlab_token'] ?? ''),
+            'github_token' => isset($_POST['aica_github_token']) ? sanitize_text_field($_POST['aica_github_token']) : '',
+            'gitlab_token' => isset($_POST['aica_gitlab_token']) ? sanitize_text_field($_POST['aica_gitlab_token']) : '',
             
-            'bitbucket_username' => sanitize_text_field($_POST['aica_bitbucket_username'] ?? ''),
-            'bitbucket_app_password' => sanitize_text_field($_POST['aica_bitbucket_app_password'] ?? ''),
+            'bitbucket_username' => isset($_POST['aica_bitbucket_username']) ? sanitize_text_field($_POST['aica_bitbucket_username']) : '',
+            'bitbucket_app_password' => isset($_POST['aica_bitbucket_app_password']) ? sanitize_text_field($_POST['aica_bitbucket_app_password']) : '',
             
-            'allowed_file_extensions' => sanitize_text_field($_POST['aica_allowed_file_extensions'] ?? 'txt,pdf,php,js,css,html,json,md'),
+            'allowed_file_extensions' => isset($_POST['aica_allowed_file_extensions']) ? sanitize_text_field($_POST['aica_allowed_file_extensions']) : 'txt,pdf,php,js,css,html,json,md',
             
             'auto_purge_enabled' => isset($_POST['aica_auto_purge_enabled']) ? 1 : 0,
-            'auto_purge_days' => intval($_POST['aica_auto_purge_days'] ?? 30)
+            'auto_purge_days' => isset($_POST['aica_auto_purge_days']) ? intval($_POST['aica_auto_purge_days']) : 30,
+            
+            'debug_mode' => isset($_POST['aica_debug_mode']) ? 1 : 0
         ];
         
         // Zapisz opcje
+        $success = true;
         foreach ($options as $key => $value) {
-            aica_update_option($key, $value);
+            $result = aica_update_option($key, $value);
+            if (!$result) {
+                $success = false;
+                aica_log('Błąd zapisywania opcji: ' . $key, 'error');
+            }
         }
         
         // Zapisz szablony promptów
-        if (isset($_POST['aica_templates']) && is_array($_POST['aica_templates'])) {
+        if (isset($_POST['aica_prompt_templates']) && is_array($_POST['aica_prompt_templates'])) {
             $templates = [];
             
-            foreach ($_POST['aica_templates'] as $template) {
+            foreach ($_POST['aica_prompt_templates'] as $template) {
                 if (!empty($template['name']) && !empty($template['prompt'])) {
                     $templates[] = [
                         'name' => sanitize_text_field($template['name']),
@@ -64,12 +76,24 @@ class SettingsHandler {
                 }
             }
             
-            aica_update_option('templates', $templates);
+            $result = aica_update_option('prompt_templates', $templates);
+            if (!$result) {
+                $success = false;
+                aica_log('Błąd zapisywania szablonów promptów', 'error');
+            }
         }
         
-        wp_send_json_success([
-            'message' => __('Ustawienia zostały zapisane.', 'ai-chat-assistant')
-        ]);
+        if ($success) {
+            aica_log('Ustawienia zostały zapisane pomyślnie');
+            wp_send_json_success([
+                'message' => __('Ustawienia zostały zapisane pomyślnie.', 'ai-chat-assistant')
+            ]);
+        } else {
+            aica_log('Wystąpił błąd podczas zapisywania niektórych ustawień', 'error');
+            wp_send_json_error([
+                'message' => __('Wystąpił błąd podczas zapisywania niektórych ustawień.', 'ai-chat-assistant')
+            ]);
+        }
     }
     
     /**

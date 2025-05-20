@@ -99,8 +99,16 @@ class Main {
                 [],
                 AICA_VERSION
             );
+        }
 
-            // Skrypty JavaScript
+        // Style i skrypty dla konkretnych stron
+        if ($page === 'ai-chat-assistant-settings') {
+            // Strona ustawień
+            // Korzystamy z oddzielnych plików zamiast rejestrować je tutaj
+            // Pliki te są ładowane bezpośrednio w szablonie settings.php
+            // Nie rejestrujemy tutaj settings.js i settings.css, ponieważ są one ładowane w szablonie
+            
+            // Skrypty ogólne dla administratora
             wp_enqueue_script(
                 'aica-admin',
                 AICA_PLUGIN_URL . 'assets/js/admin.js',
@@ -109,7 +117,7 @@ class Main {
                 true
             );
 
-            // Przekaż dane do JS
+            // Przekazanie danych do skryptu
             wp_localize_script('aica-admin', 'aica_data', [
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'admin_url' => admin_url('admin-post.php'),
@@ -119,6 +127,7 @@ class Main {
                     'error' => __('Błąd', 'ai-chat-assistant'),
                     'loading' => __('Ładowanie...', 'ai-chat-assistant'),
                     'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
+                    'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
                     'saved' => __('Zapisano', 'ai-chat-assistant'),
                     'save_error' => __('Błąd zapisywania', 'ai-chat-assistant'),
                     'testing' => __('Testowanie...', 'ai-chat-assistant'),
@@ -127,33 +136,54 @@ class Main {
                     'refreshing_models' => __('Odświeżanie listy modeli...', 'ai-chat-assistant')
                 ]
             ]);
-        }
-
-        // Style i skrypty dla konkretnych stron
-        if ($page === 'ai-chat-assistant-settings') {
-            // Strona ustawień
-            wp_enqueue_script('aica-settings-script', AICA_PLUGIN_URL . 'assets/js/settings.js', ['jquery'], AICA_VERSION, true);
-            wp_localize_script('aica-settings-script', 'aica_settings_data', [
-                'nonce' => wp_create_nonce('aica_settings_nonce'),
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'i18n' => [
-                    'testing' => __('Testowanie...', 'ai-chat-assistant'),
-                    'refreshing_models' => __('Odświeżanie modeli...', 'ai-chat-assistant')
-                ]
-            ]);
         } elseif ($page === 'ai-chat-assistant-diagnostics') {
             // Strona diagnostyki
             wp_enqueue_style('aica-diagnostics-style', AICA_PLUGIN_URL . 'assets/css/diagnostics.css', [], AICA_VERSION);
             wp_enqueue_script('aica-diagnostics-script', AICA_PLUGIN_URL . 'assets/js/diagnostics.js', ['jquery'], AICA_VERSION, true);
+            
+            // Skrypty ogólne dla administratora
+            wp_enqueue_script(
+                'aica-admin',
+                AICA_PLUGIN_URL . 'assets/js/admin.js',
+                ['jquery'],
+                AICA_VERSION,
+                true
+            );
+            
             wp_localize_script('aica-diagnostics-script', 'aica_diagnostics_data', [
                 'nonce' => wp_create_nonce('aica_diagnostics_nonce'),
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'chat_url' => admin_url('admin.php?page=ai-chat-assistant')
             ]);
+            
+            // Przekazanie danych do skryptu admin
+            wp_localize_script('aica-admin', 'aica_data', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'admin_url' => admin_url('admin-post.php'),
+                'nonce' => wp_create_nonce('aica_nonce'),
+                'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
+                'i18n' => [
+                    'error' => __('Błąd', 'ai-chat-assistant'),
+                    'loading' => __('Ładowanie...', 'ai-chat-assistant'),
+                    'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
+                    'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
+                    'saved' => __('Zapisano', 'ai-chat-assistant'),
+                    'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
+                ]
+            ]);
         } elseif ($page === 'ai-chat-assistant-repositories') {
             // Strona repozytoriów
             wp_enqueue_style('aica-repositories-style', AICA_PLUGIN_URL . 'assets/css/repositories.css', [], AICA_VERSION);
             wp_enqueue_script('aica-repositories-script', AICA_PLUGIN_URL . 'assets/js/repositories.js', ['jquery'], AICA_VERSION, true);
+            
+            // Skrypty ogólne dla administratora
+            wp_enqueue_script(
+                'aica-admin',
+                AICA_PLUGIN_URL . 'assets/js/admin.js',
+                ['jquery'],
+                AICA_VERSION,
+                true
+            );
             
             // Dodaj Prism.js dla podświetlania składni kodu
             wp_enqueue_style('prism-css', AICA_PLUGIN_URL . 'assets/vendor/prism/prism.css', [], AICA_VERSION);
@@ -183,10 +213,36 @@ class Main {
                     'copy_success' => __('Zawartość pliku została skopiowana do schowka.', 'ai-chat-assistant')
                 ]
             ]);
+            
+            // Przekazanie danych do skryptu admin
+            wp_localize_script('aica-admin', 'aica_data', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'admin_url' => admin_url('admin-post.php'),
+                'nonce' => wp_create_nonce('aica_nonce'),
+                'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
+                'i18n' => [
+                    'error' => __('Błąd', 'ai-chat-assistant'),
+                    'loading' => __('Ładowanie...', 'ai-chat-assistant'),
+                    'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
+                    'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
+                    'saved' => __('Zapisano', 'ai-chat-assistant'),
+                    'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
+                ]
+            ]);
         } elseif ($page === 'ai-chat-assistant-history') {
             // Strona historii
             wp_enqueue_style('aica-history-style', AICA_PLUGIN_URL . 'assets/css/history.css', [], AICA_VERSION);
             wp_enqueue_script('aica-history-script', AICA_PLUGIN_URL . 'assets/js/history.js', ['jquery'], AICA_VERSION, true);
+            
+            // Skrypty ogólne dla administratora
+            wp_enqueue_script(
+                'aica-admin',
+                AICA_PLUGIN_URL . 'assets/js/admin.js',
+                ['jquery'],
+                AICA_VERSION,
+                true
+            );
+            
             wp_localize_script('aica-history-script', 'aica_history', [
                 'nonce' => wp_create_nonce('aica_history_nonce'),
                 'ajax_url' => admin_url('admin-ajax.php'),
@@ -225,17 +281,85 @@ class Main {
                     'just_now' => __('przed chwilą', 'ai-chat-assistant')
                 ]
             ]);
+            
+            // Przekazanie danych do skryptu admin
+            wp_localize_script('aica-admin', 'aica_data', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'admin_url' => admin_url('admin-post.php'),
+                'nonce' => wp_create_nonce('aica_nonce'),
+                'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
+                'i18n' => [
+                    'error' => __('Błąd', 'ai-chat-assistant'),
+                    'loading' => __('Ładowanie...', 'ai-chat-assistant'),
+                    'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
+                    'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
+                    'saved' => __('Zapisano', 'ai-chat-assistant'),
+                    'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
+                ]
+            ]);
         } elseif ($page === 'ai-chat-assistant') {
             // Strona główna czatu
             wp_enqueue_style('aica-chat-style', AICA_PLUGIN_URL . 'assets/css/chat.css', [], AICA_VERSION);
             wp_enqueue_script('aica-chat-script', AICA_PLUGIN_URL . 'assets/js/chat.js', ['jquery'], AICA_VERSION, true);
-            wp_localize_script('aica-chat-script', 'aica_data', [
+            
+            // Skrypty ogólne dla administratora
+            wp_enqueue_script(
+                'aica-admin',
+                AICA_PLUGIN_URL . 'assets/js/admin.js',
+                ['jquery'],
+                AICA_VERSION,
+                true
+            );
+            
+            wp_localize_script('aica-chat-script', 'aica_chat', [
                 'nonce' => wp_create_nonce('aica_nonce'),
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'i18n' => [
                     'loading' => __('Ładowanie...', 'ai-chat-assistant'),
                     'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
                     'error' => __('Wystąpił błąd. Spróbuj ponownie.', 'ai-chat-assistant')
+                ]
+            ]);
+            
+            // Przekazanie danych do skryptu admin
+            wp_localize_script('aica-admin', 'aica_data', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'admin_url' => admin_url('admin-post.php'),
+                'nonce' => wp_create_nonce('aica_nonce'),
+                'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
+                'i18n' => [
+                    'error' => __('Błąd', 'ai-chat-assistant'),
+                    'loading' => __('Ładowanie...', 'ai-chat-assistant'),
+                    'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
+                    'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
+                    'saved' => __('Zapisano', 'ai-chat-assistant'),
+                    'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
+                ]
+            ]);
+        } else if (strpos($hook, 'ai-chat-assistant') !== false) {
+            // Dla pozostałych stron wtyczki, które nie są obsługiwane powyżej
+            // Ładujemy tylko podstawowe skrypty administracyjne
+            wp_enqueue_script(
+                'aica-admin',
+                AICA_PLUGIN_URL . 'assets/js/admin.js',
+                ['jquery'],
+                AICA_VERSION,
+                true
+            );
+            
+            // Przekazanie danych do skryptu admin
+            wp_localize_script('aica-admin', 'aica_data', [
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'admin_url' => admin_url('admin-post.php'),
+                'nonce' => wp_create_nonce('aica_nonce'),
+                'settings_nonce' => wp_create_nonce('aica_settings_nonce'),
+                'i18n' => [
+                    'error' => __('Błąd', 'ai-chat-assistant'),
+                    'loading' => __('Ładowanie...', 'ai-chat-assistant'),
+                    'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
+                    'saving' => __('Zapisywanie...', 'ai-chat-assistant'),
+                    'saved' => __('Zapisano', 'ai-chat-assistant'),
+                    'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
                 ]
             ]);
         }

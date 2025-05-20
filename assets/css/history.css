@@ -2,28 +2,31 @@
 .aica-history-container {
     display: flex;
     background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     margin-top: 20px;
 }
 
 /* Nagłówek strony */
-.aica-history-header {
+.aica-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
 }
 
-.aica-history-header h1 {
+.aica-header h1 {
     font-size: 24px;
     font-weight: 600;
     margin: 0;
     padding: 0;
+    color: #23282d;
 }
 
-.aica-history-actions {
+.aica-header-actions {
     display: flex;
     gap: 12px;
     align-items: center;
@@ -38,44 +41,119 @@
 
 .aica-search-container input {
     width: 100%;
-    padding: 8px 36px 8px 12px;
+    padding: 10px 40px 10px 15px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 24px;
     font-size: 14px;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07);
+}
+
+.aica-search-container input:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
 }
 
 .aica-search-button {
     position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 30px;
+    width: 30px;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0 10px;
+    padding: 0;
     color: #757575;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
 }
 
 .aica-search-button:hover {
     color: #2271b1;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Filtry */
+.aica-filter-container {
+    position: relative;
+}
+
+.aica-filter-button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.aica-filter-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 100;
+    width: 300px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    padding: 15px;
+    margin-top: 8px;
+}
+
+.aica-filter-group {
+    margin-bottom: 15px;
+}
+
+.aica-filter-group h3 {
+    margin: 0 0 10px 0;
+    font-size: 15px;
+    color: #23282d;
+}
+
+.aica-filter-group label {
+    display: block;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.aica-date-range {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.aica-date-range input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.aica-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
 }
 
 /* Lista rozmów */
 .aica-conversations-list {
-    width: 300px;
+    width: 350px;
     border-right: 1px solid #e0e0e0;
     overflow-y: auto;
     height: calc(100vh - 200px);
+    background-color: #f9f9f9;
 }
 
 .aica-conversation-item {
     padding: 15px;
     border-bottom: 1px solid #e0e0e0;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .aica-conversation-item:hover {
@@ -94,6 +172,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: #23282d;
 }
 
 .aica-conversation-meta {
@@ -104,18 +183,40 @@
     color: #757575;
 }
 
+.aica-search-highlight {
+    background-color: rgba(255, 230, 0, 0.5);
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
 /* Widok wiadomości */
 .aica-messages-container {
     flex: 1;
-    padding: 20px;
+    padding: 25px;
     overflow-y: auto;
     height: calc(100vh - 200px);
+    background: white;
+}
+
+.aica-conversation-header {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.aica-conversation-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #23282d;
 }
 
 .aica-message-item {
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
+    margin-bottom: 25px;
+    max-width: 90%;
+}
+
+.aica-message-item.user {
+    margin-left: auto;
 }
 
 .aica-message-header {
@@ -128,6 +229,7 @@
     font-weight: 600;
     font-size: 14px;
     margin-right: 10px;
+    color: #23282d;
 }
 
 .aica-message-time {
@@ -138,17 +240,30 @@
 .aica-message-content {
     background-color: #f9f9f9;
     padding: 15px;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.6;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .aica-message-item.user .aica-message-content {
-    background-color: #f0f7ff;
+    background-color: #e7f3ff;
+    border-top-right-radius: 4px;
 }
 
 .aica-message-item.assistant .aica-message-content {
-    background-color: #f9f9f9;
+    background-color: #f5f5f5;
+    border-top-left-radius: 4px;
+}
+
+/* Akcje dla rozmowy */
+.aica-conversation-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
 }
 
 /* Paginacja */
@@ -156,7 +271,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-top: 1px solid #e0e0e0;
 }
 
 .aica-pagination-info {
@@ -166,21 +283,28 @@
 }
 
 .aica-pagination-button {
-    padding: 6px 12px;
-    background-color: #f0f0f0;
+    height: 32px;
+    width: 32px;
+    background-color: white;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 50%;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .aica-pagination-button:hover {
-    background-color: #e0e0e0;
+    background-color: #2271b1;
+    border-color: #2271b1;
+    color: white;
 }
 
 .aica-pagination-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    background-color: #f1f1f1;
 }
 
 /* Stan pusty */
@@ -206,17 +330,157 @@
     font-size: 20px;
     margin: 0 0 10px 0;
     padding: 0;
+    color: #23282d;
 }
 
 .aica-empty-state p {
     color: #757575;
     margin: 0 0 20px 0;
+    font-size: 14px;
 }
 
-/* Akcje dla rozmowy */
-.aica-conversation-actions {
+/* Ładowanie */
+.aica-loading, .aica-loading-messages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 0;
+    color: #757575;
+}
+
+.aica-loading-spinner {
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top: 3px solid #2271b1;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: aica-spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes aica-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Dialog */
+.aica-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.aica-dialog-content {
+    width: 400px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.aica-dialog-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.aica-dialog-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #23282d;
+}
+
+.aica-dialog-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #757575;
+    transition: color 0.2s ease;
+}
+
+.aica-dialog-close:hover {
+    color: #d63638;
+}
+
+.aica-dialog-body {
+    padding: 20px 15px;
+}
+
+.aica-dialog-footer {
+    padding: 15px;
+    border-top: 1px solid #eee;
     display: flex;
     justify-content: flex-end;
     gap: 10px;
-    margin-top: 20px;
+}
+
+/* Dropdown eksportu */
+.aica-export-dropdown {
+    position: absolute;
+    z-index: 100;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    padding: 15px;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.aica-export-dropdown h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #23282d;
+}
+
+.aica-export-format {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 5px;
+}
+
+/* Responsywność */
+@media screen and (max-width: 782px) {
+    .aica-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .aica-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .aica-search-container {
+        max-width: 100%;
+    }
+    
+    .aica-history-container {
+        flex-direction: column;
+    }
+    
+    .aica-conversations-list {
+        width: 100%;
+        height: auto;
+        max-height: 300px;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .aica-messages-container {
+        height: auto;
+        max-height: calc(100vh - 400px);
+    }
 }

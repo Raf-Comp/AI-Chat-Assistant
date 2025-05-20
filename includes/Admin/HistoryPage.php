@@ -23,6 +23,50 @@ class HistoryPage {
         // Przekazanie nonce do szablonu
         $history_nonce = wp_create_nonce('aica_history_nonce');
         
+        // Dodanie skryptów i stylów
+        wp_enqueue_style('aica-history-css', AICA_PLUGIN_URL . 'assets/css/history.css', array(), AICA_VERSION);
+        wp_enqueue_script('aica-history-js', AICA_PLUGIN_URL . 'assets/js/history.js', array('jquery'), AICA_VERSION, true);
+        
+        // Przekazanie danych do skryptu
+        wp_localize_script('aica-history-js', 'aica_history', array(
+            'nonce' => $history_nonce,
+            'chat_url' => admin_url('admin.php?page=ai-chat-assistant'),
+            'i18n' => array(
+                'loading' => __('Ładowanie...', 'ai-chat-assistant'),
+                'loading_messages' => __('Ładowanie wiadomości...', 'ai-chat-assistant'),
+                'no_conversations' => __('Brak rozmów', 'ai-chat-assistant'),
+                'no_conversations_desc' => __('Nie masz jeszcze żadnych rozmów.', 'ai-chat-assistant'),
+                'new_conversation' => __('Nowa rozmowa', 'ai-chat-assistant'),
+                'no_messages' => __('Brak wiadomości w tej rozmowie.', 'ai-chat-assistant'),
+                'load_error' => __('Wystąpił błąd podczas ładowania danych.', 'ai-chat-assistant'),
+                'confirm_delete' => __('Czy na pewno chcesz usunąć tę rozmowę? Tej operacji nie można cofnąć.', 'ai-chat-assistant'),
+                'delete_error' => __('Wystąpił błąd podczas usuwania rozmowy.', 'ai-chat-assistant'),
+                'duplicate_success' => __('Rozmowa została pomyślnie zduplikowana.', 'ai-chat-assistant'),
+                'duplicate_error' => __('Wystąpił błąd podczas duplikowania rozmowy.', 'ai-chat-assistant'),
+                'min_search_length' => __('Wprowadź co najmniej 3 znaki, aby wyszukać.', 'ai-chat-assistant'),
+                'pagination_info' => __('Wyniki %1$s - %2$s z %3$s', 'ai-chat-assistant'),
+                'user' => __('Użytkownik', 'ai-chat-assistant'),
+                'continue_conversation' => __('Kontynuuj rozmowę', 'ai-chat-assistant'),
+                'duplicate' => __('Duplikuj', 'ai-chat-assistant'),
+                'export' => __('Eksportuj', 'ai-chat-assistant'),
+                'delete' => __('Usuń', 'ai-chat-assistant'),
+                'just_now' => __('Przed chwilą', 'ai-chat-assistant'),
+                'second' => __('sekunda', 'ai-chat-assistant'),
+                'seconds' => __('sekund', 'ai-chat-assistant'),
+                'minute' => __('minuta', 'ai-chat-assistant'),
+                'minutes' => __('minut', 'ai-chat-assistant'),
+                'hour' => __('godzina', 'ai-chat-assistant'),
+                'hours' => __('godzin', 'ai-chat-assistant'),
+                'day' => __('dzień', 'ai-chat-assistant'),
+                'days' => __('dni', 'ai-chat-assistant'),
+                'month' => __('miesiąc', 'ai-chat-assistant'),
+                'months' => __('miesięcy', 'ai-chat-assistant'),
+                'year' => __('rok', 'ai-chat-assistant'),
+                'years' => __('lat', 'ai-chat-assistant'),
+                'ago' => __('temu', 'ai-chat-assistant')
+            )
+        ));
+        
         include_once AICA_PLUGIN_DIR . 'templates/admin/history.php';
     }
 
@@ -63,8 +107,7 @@ class HistoryPage {
         ];
         
         if (!empty($date_from)) {
-            $args['date_from'] = $date_from;
-        }
+            $args['date_from'] = $date_from;}
         
         if (!empty($date_to)) {
             $args['date_to'] = $date_to;
@@ -115,6 +158,7 @@ class HistoryPage {
         wp_send_json_success([
             'messages' => $messages,
             'title' => $session->title,
+            'session' => $session,
             'pagination' => [
                 'total_items' => count($messages),
                 'current_page' => 1,

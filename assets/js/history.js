@@ -55,7 +55,7 @@ jQuery(document).ready(function($) {
                     // Jeśli jest aktywna rozmowa, zaznacz ją
                     if (currentSession) {
                         $('.aica-conversation-item[data-session-id="' + currentSession + '"]').addClass('active');
-                    } else if (conversations.length > 0) {
+                    } else if (conversations && conversations.length > 0) {
                         // Jeśli nie ma aktywnej rozmowy, zaznacz pierwszą
                         currentSession = conversations[0].session_id;
                         $('.aica-conversation-item[data-session-id="' + currentSession + '"]').addClass('active');
@@ -68,7 +68,7 @@ jQuery(document).ready(function($) {
                             <div class="aica-empty-icon">
                                 <span class="dashicons dashicons-warning"></span>
                             </div>
-                            <p>${response.data.message || aica_history.i18n.load_error}</p>
+                            <p>${response.data ? response.data.message : aica_history.i18n.load_error}</p>
                         </div>
                     `);
                 }
@@ -91,7 +91,7 @@ jQuery(document).ready(function($) {
     function renderConversationsList(conversations, search = '') {
         const conversationsList = $('.aica-conversations-list');
         
-        if (conversations.length === 0) {
+        if (!conversations || conversations.length === 0) {
             // Wyświetl komunikat o braku rozmów
             conversationsList.html(`
                 <div class="aica-empty-state">
@@ -126,8 +126,8 @@ jQuery(document).ready(function($) {
             const activeClass = conversation.session_id === currentSession ? 'active' : '';
             
             // Podświetl wyszukiwany tekst w tytule, jeśli podano
-            let title = conversation.title;
-            if (search) {
+            let title = conversation.title || 'Rozmowa ' + conversation.session_id;
+            if (search && search.length > 0) {
                 const regex = new RegExp('(' + search + ')', 'gi');
                 title = title.replace(regex, '<span class="aica-search-highlight">$1</span>');
             }
@@ -138,7 +138,7 @@ jQuery(document).ready(function($) {
                     <div class="aica-conversation-title">${title}</div>
                     <div class="aica-conversation-meta">
                         <span class="aica-conversation-date">${timeAgo}</span>
-                        <span class="aica-conversation-messages">${conversation.message_count || 0}</span>
+                        <span class="aica-conversation-messages">${conversation.message_count || 0} wiadomości</span>
                     </div>
                 </div>
             `;
@@ -181,14 +181,13 @@ jQuery(document).ready(function($) {
                 action: 'aica_get_chat_history',
                 nonce: aica_history.nonce,
                 session_id: sessionId,
-                page: page,
-                nonce_key: 'aica_history_nonce'
+                page: page
             },
             success: function(response) {
                 if (response.success) {
                     // Pobierz dane
                     const messages = response.data.messages;
-                    const title = response.data.title || sessionId;
+                    const title = response.data.title || 'Rozmowa ' + sessionId;
                     
                     // Generuj widok wiadomości
                     renderConversationMessages(messages, title, sessionId);
@@ -199,7 +198,7 @@ jQuery(document).ready(function($) {
                             <div class="aica-empty-icon">
                                 <span class="dashicons dashicons-warning"></span>
                             </div>
-                            <p>${response.data.message || aica_history.i18n.load_error}</p>
+                            <p>${response.data ? response.data.message : aica_history.i18n.load_error}</p>
                         </div>
                     `);
                 }
@@ -220,7 +219,7 @@ jQuery(document).ready(function($) {
     
     // Wyświetlanie wiadomości
     function renderConversationMessages(messages, title, sessionId) {
-        if (messages.length === 0) {
+        if (!messages || messages.length === 0) {
             // Wyświetl komunikat o braku wiadomości
             $('.aica-messages-container').html(`
                 <div class="aica-empty-state">
@@ -248,12 +247,29 @@ jQuery(document).ready(function($) {
             const message = messages[i];
             
             // Formatowanie daty
-            const createdDate = new Date(message.time);
+            let createdDate;
+            try {
+                createdDate = new Date(message.time);
+            } catch (e) {
+                createdDate = new Date();
+            }
             const formattedDate = createdDate.toLocaleString();
             
             // Określenie typu wiadomości
             const senderClass = message.type === 'user' ? 'user' : 'assistant';
             const senderName = message.type === 'user' ? aica_history.i18n.user : 'Claude';
+            
+            // Konwersja zawartości (obsługa wiadomości w formacie HTML)
+            let content = message.content || '';
+            // Bezpieczna konwersja zawartości HTML
+            content = content.replace(/&/g, '&amp;')
+                           .replace(/</g, '&lt;')
+                           .replace(/>/g, '&gt;')
+                           .replace(/"/g, '&quot;')
+                           .replace(/'/g, '&#039;');
+            
+            // Zastąp znaki nowej linii znacznikami <br>
+            content = content.replace(/\n/g, '<br>');
             
             // Dodaj wiadomość
             html += `
@@ -262,7 +278,7 @@ jQuery(document).ready(function($) {
                         <span class="aica-message-sender">${senderName}</span>
                         <span class="aica-message-time">${formattedDate}</span>
                     </div>
-                    <div class="aica-message-content">${message.content}</div>
+                    <div class="aica-message-content">${content}</div>
                 </div>
             `;
         }
@@ -303,7 +319,7 @@ jQuery(document).ready(function($) {
         // Przycisk eksportu
         $('.aica-export-button').on('click', function() {
             const sessionId = $(this).data('session-id');
-            exportConversation(sessionId);
+            showExportOptions(sessionId);
         });
         
         // Przycisk usuwania
@@ -311,6 +327,38 @@ jQuery(document).ready(function($) {
             const sessionId = $(this).data('session-id');
             if (confirm(aica_history.i18n.confirm_delete)) {
                 deleteConversation(sessionId);
+            }
+        });
+    }
+    
+    // Funkcja pokazująca opcje eksportu
+    function showExportOptions(sessionId) {
+        // Tworzymy dropdown z opcjami formatu
+        const dropdown = $('<div class="aica-export-dropdown"></div>');
+        
+        // Dodajemy opcje formatu
+        dropdown.append(`
+            <h4>Wybierz format eksportu:</h4>
+            <button class="button aica-export-format" data-format="json" data-session-id="${sessionId}">JSON</button>
+            <button class="button aica-export-format" data-format="txt" data-session-id="${sessionId}">Tekst</button>
+            <button class="button aica-export-format" data-format="html" data-session-id="${sessionId}">HTML</button>
+        `);
+        
+        // Dodajemy dropdown po przycisku eksportu
+        $('.aica-export-button').after(dropdown);
+        
+        // Obsługa kliknięcia opcji formatu
+        $('.aica-export-format').on('click', function() {
+            const format = $(this).data('format');
+            const sessionId = $(this).data('session-id');
+            exportConversation(sessionId, format);
+            dropdown.remove();
+        });
+        
+        // Ukrywamy dropdown po kliknięciu poza nim
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.aica-export-dropdown, .aica-export-button').length) {
+                dropdown.remove();
             }
         });
     }
@@ -408,7 +456,7 @@ jQuery(document).ready(function($) {
                     alert(aica_history.i18n.duplicate_success);
                     loadConversations(currentPage);
                 } else {
-                    alert(response.data.message || aica_history.i18n.duplicate_error);
+                    alert(response.data ? response.data.message : aica_history.i18n.duplicate_error);
                 }
             },
             error: function() {
@@ -418,37 +466,38 @@ jQuery(document).ready(function($) {
     }
     
     // Eksport rozmowy
-    function exportConversation(sessionId) {
-        // Utwórz formularz do wysłania
-        const form = $('<form>', {
-            'method': 'POST',
-            'action': ajaxurl,
-            'target': '_blank'
+    function exportConversation(sessionId, format = 'json') {
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'aica_export_conversation',
+                nonce: aica_history.nonce,
+                session_id: sessionId,
+                format: format
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Pobierz dane do pobrania
+                    const content = response.data.content;
+                    const filename = response.data.filename;
+                    const mime_type = response.data.mime_type;
+                    
+                    // Stwórz link do pobrania
+                    const blob = new Blob([content], { type: mime_type });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } else {
+                    alert(response.data ? response.data.message : 'Wystąpił błąd podczas eksportu rozmowy.');
+                }
+            },
+            error: function() {
+                alert('Wystąpił błąd podczas eksportu rozmowy.');}
         });
-        
-        // Dodaj pola formularza
-        form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'action',
-            'value': 'aica_export_conversation'
-        }));
-        
-        form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'nonce',
-            'value': aica_history.nonce
-        }));
-        
-        form.append($('<input>', {
-            'type': 'hidden',
-            'name': 'session_id',
-            'value': sessionId
-        }));
-        
-        // Dodaj formularz do dokumentu i wyślij go
-        $('body').append(form);
-        form.submit();
-        form.remove();
     }
     
     // Usuwanie rozmowy
@@ -459,8 +508,7 @@ jQuery(document).ready(function($) {
             data: {
                 action: 'aica_delete_session',
                 nonce: aica_history.nonce,
-                session_id: sessionId,
-                nonce_key: 'aica_history_nonce'
+                session_id: sessionId
             },
             success: function(response) {
                 if (response.success) {
@@ -473,7 +521,7 @@ jQuery(document).ready(function($) {
                     // Resetuj aktywną rozmowę
                     currentSession = null;
                 } else {
-                    alert(response.data.message || aica_history.i18n.delete_error);
+                    alert(response.data ? response.data.message : aica_history.i18n.delete_error);
                 }
             },
             error: function() {
@@ -494,30 +542,30 @@ jQuery(document).ready(function($) {
         // Funkcja do formatowania liczby i jednostki
         function formatUnit(value, singular, plural) {
             if (value === 1) {
-                return value + ' ' + aica_history.i18n[singular];
+                return value + ' ' + (aica_history.i18n[singular] || singular);
             } else {
-                return value + ' ' + aica_history.i18n[plural];
+                return value + ' ' + (aica_history.i18n[plural] || plural);
             }
         }
         
         if (diff < 60) {
             // Mniej niż minuta
-            return diff < 5 ? aica_history.i18n.just_now : formatUnit(diff, 'second', 'seconds') + ' ' + aica_history.i18n.ago;
+            return diff < 5 ? (aica_history.i18n.just_now || 'Przed chwilą') : formatUnit(diff, 'second', 'seconds') + ' ' + (aica_history.i18n.ago || 'temu');
         } else if (diff < 3600) {
             // Mniej niż godzina
-            return formatUnit(Math.floor(diff / 60), 'minute', 'minutes') + ' ' + aica_history.i18n.ago;
+            return formatUnit(Math.floor(diff / 60), 'minute', 'minutes') + ' ' + (aica_history.i18n.ago || 'temu');
         } else if (diff < 86400) {
             // Mniej niż dzień
-            return formatUnit(Math.floor(diff / 3600), 'hour', 'hours') + ' ' + aica_history.i18n.ago;
+            return formatUnit(Math.floor(diff / 3600), 'hour', 'hours') + ' ' + (aica_history.i18n.ago || 'temu');
         } else if (diff < 2592000) {
             // Mniej niż miesiąc (30 dni)
-            return formatUnit(Math.floor(diff / 86400), 'day', 'days') + ' ' + aica_history.i18n.ago;
+            return formatUnit(Math.floor(diff / 86400), 'day', 'days') + ' ' + (aica_history.i18n.ago || 'temu');
         } else if (diff < 31536000) {
             // Mniej niż rok
-            return formatUnit(Math.floor(diff / 2592000), 'month', 'months') + ' ' + aica_history.i18n.ago;
+            return formatUnit(Math.floor(diff / 2592000), 'month', 'months') + ' ' + (aica_history.i18n.ago || 'temu');
         } else {
             // Więcej niż rok
-            return formatUnit(Math.floor(diff / 31536000), 'year', 'years') + ' ' + aica_history.i18n.ago;
+            return formatUnit(Math.floor(diff / 31536000), 'year', 'years') + ' ' + (aica_history.i18n.ago || 'temu');
         }
     }
     
@@ -532,7 +580,7 @@ jQuery(document).ready(function($) {
         // Jeśli wciśnięto Enter
         if (e.which === 13) {
             if (searchTerm.length < 3 && searchTerm.length > 0) {
-                alert(aica_history.i18n.min_search_length);
+                alert(aica_history.i18n.min_search_length || 'Wprowadź co najmniej 3 znaki, aby wyszukać.');
                 return;
             }
             
@@ -545,7 +593,7 @@ jQuery(document).ready(function($) {
         const searchTerm = $('#aica-search-input').val().trim();
         
         if (searchTerm.length < 3 && searchTerm.length > 0) {
-            alert(aica_history.i18n.min_search_length);
+            alert(aica_history.i18n.min_search_length || 'Wprowadź co najmniej 3 znaki, aby wyszukać.');
             return;
         }
         
@@ -589,7 +637,7 @@ jQuery(document).ready(function($) {
         }
         
         // Pokaż wskaźnik ładowania
-        $('.aica-history-container').html('<div class="aica-loading"><div class="aica-loading-spinner"></div><p>' + aica_history.i18n.loading + '</p></div>');
+        $('.aica-history-container').html('<div class="aica-loading"><div class="aica-loading-spinner"></div><p>' + (aica_history.i18n.loading || 'Ładowanie...') + '</p></div>');
         
         // Wykonaj nowe zapytanie
         $.ajax({
@@ -630,7 +678,7 @@ jQuery(document).ready(function($) {
                             <div class="aica-empty-icon">
                                 <span class="dashicons dashicons-warning"></span>
                             </div>
-                            <p>${response.data.message || aica_history.i18n.load_error}</p>
+                            <p>${response.data ? response.data.message : (aica_history.i18n.load_error || 'Wystąpił błąd podczas ładowania danych.')}</p>
                         </div>
                     `);
                 }
@@ -645,7 +693,7 @@ jQuery(document).ready(function($) {
                         <div class="aica-empty-icon">
                             <span class="dashicons dashicons-warning"></span>
                         </div>
-                        <p>${aica_history.i18n.load_error}</p>
+                        <p>${aica_history.i18n.load_error || 'Wystąpił błąd podczas ładowania danych.'}</p>
                     </div>
                 `);
             }

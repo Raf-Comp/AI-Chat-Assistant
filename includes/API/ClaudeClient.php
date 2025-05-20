@@ -19,8 +19,8 @@ class ClaudeClient {
             'timeout' => 30,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'X-API-Key' => $this->api_key,
-                'Anthropic-Version' => '2023-06-01',
+                'x-api-key' => $this->api_key,
+                'anthropic-version' => '2023-06-01',
             ],
             'body' => json_encode([
                 'model' => 'claude-3-haiku-20240307',
@@ -79,8 +79,8 @@ class ClaudeClient {
             'timeout' => 60,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'X-API-Key' => $this->api_key,
-                'Anthropic-Version' => '2023-06-01',
+                'x-api-key' => $this->api_key,
+                'anthropic-version' => '2023-06-01',
             ],
             'body' => json_encode([
                 'model' => $model,
@@ -137,6 +137,7 @@ class ClaudeClient {
 
     /**
      * Pobranie dostępnych modeli
+     * Zaktualizowana metoda pobierania modeli z API Anthropic
      */
     public function get_available_models() {
         $args = [
@@ -144,8 +145,8 @@ class ClaudeClient {
             'timeout' => 30,
             'headers' => [
                 'Content-Type' => 'application/json',
-                'X-API-Key' => $this->api_key,
-                'Anthropic-Version' => '2023-06-01',
+                'x-api-key' => $this->api_key,
+                'anthropic-version' => '2023-06-01',
             ]
         ];
 
@@ -154,35 +155,90 @@ class ClaudeClient {
 
         if (is_wp_error($response)) {
             aica_log('Błąd pobierania modeli Claude: ' . $response->get_error_message(), 'error');
-            return [];
+            return $this->get_default_models();
         }
 
         $status_code = wp_remote_retrieve_response_code($response);
         if ($status_code < 200 || $status_code >= 300) {
             aica_log('Błąd pobierania modeli Claude (HTTP ' . $status_code . ')', 'error');
-            return [];
+            return $this->get_default_models();
         }
 
         $body = json_decode(wp_remote_retrieve_body($response), true);
         $models = [];
 
-        if (isset($body['models']) && is_array($body['models'])) {
-            foreach ($body['models'] as $model) {
-                $models[$model['id']] = $model['name'];
+        if (isset($body['data']) && is_array($body['data'])) {
+            foreach ($body['data'] as $model) {
+                if (isset($model['id'])) {
+                    // Formatowanie przyjaznej nazwy modelu
+                    $name = $this->format_model_name($model['id']);
+                    $models[$model['id']] = $name;
+                }
             }
-            aica_log('Pobrano modele Claude: ' . implode(', ', array_keys($models)));
+            
+            if (!empty($models)) {
+                aica_log('Pobrano modele Claude: ' . implode(', ', array_keys($models)));
+                
+                // Zapisanie pobranych modeli w opcjach wtyczki
+                aica_update_option('claude_available_models', $models);
+                aica_update_option('claude_models_last_update', current_time('mysql'));
+                
+                return $models;
+            }
         }
 
-        // Jeśli API nie zwróciło listy modeli, zwróć domyślną listę
-        if (empty($models)) {
-            $models = [
-                'claude-3-opus-20240229' => 'Claude 3 Opus',
-                'claude-3-sonnet-20240229' => 'Claude 3 Sonnet',
-                'claude-3-haiku-20240307' => 'Claude 3 Haiku'
-            ];
-            aica_log('Używam domyślnej listy modeli Claude', 'warning');
+        // Jeśli API nie zwróciło listy modeli lub lista jest pusta, sprawdz cache
+        $cached_models = aica_get_option('claude_available_models', []);
+        if (!empty($cached_models)) {
+            aica_log('Używam zapisanych modeli Claude z cache', 'info');
+            return $cached_models;
         }
-
-        return $models;
+        
+        // W ostateczności zwróć domyślną listę
+        return $this->get_default_models();
+    }
+    
+    /**
+     * Formatuje nazwę modelu na bardziej przyjazną dla użytkownika
+     */
+    private function format_model_name($model_id) {
+        // Usuń datę z ID modelu
+        $base_name = preg_replace('/-\d{8}$/', '', $model_id);
+        
+        // Zamień myślniki na spacje i zastosuj wielkie litery
+        $friendly_name = str_replace('-', ' ', $base_name);
+        $friendly_name = ucwords($friendly_name);
+        
+        // Specjalne przypadki
+        if (strpos($model_id, 'claude-3') !== false) {
+            // Dla modeli Claude 3, dodaj wersję z daty
+            $date_part = substr($model_id, -8);
+            $year = substr($date_part, 0, 4);
+            $month = substr($date_part, 4, 2);
+            $day = substr($date_part, 6, 2);
+            
+            return $friendly_name . " ($year-$month-$day)";
+        }
+        
+        return $friendly_name;
+    }
+    
+    /**
+     * Zwraca domyślną listę modeli Claude
+     */
+    private function get_default_models() {
+        $default_models = [
+            'claude-3.5-sonnet-20240620' => 'Claude 3.5 Sonnet (2024-06-20)',
+            'claude-3-opus-20240229' => 'Claude 3 Opus (2024-02-29)',
+            'claude-3-sonnet-20240229' => 'Claude 3 Sonnet (2024-02-29)',
+            'claude-3-haiku-20240307' => 'Claude 3 Haiku (2024-03-07)',
+            'claude-3-haiku-20240307' => 'Claude 3 Haiku (2024-03-07)',
+            'claude-2.1' => 'Claude 2.1',
+            'claude-2.0' => 'Claude 2.0',
+            'claude-instant-1.2' => 'Claude Instant 1.2'
+        ];
+        
+        aica_log('Używam domyślnej listy modeli Claude', 'warning');
+        return $default_models;
     }
 }

@@ -16,7 +16,44 @@
      * Inicjalizacja funkcji strony ustawień
      */
     function initSettingsPage() {
-        // Obsługa zakładek
+        // Inicjalizacja zakładek
+        initTabs();
+        
+        // Inicjalizacja pól zakresu
+        initRangeFields();
+        
+        // Inicjalizacja przycisków pokazywania/ukrywania haseł
+        initPasswordToggles();
+        
+        // Inicjalizacja pola tagów z rozszerzeniami plików
+        initTagsField();
+        
+        // Inicjalizacja szablonów promptów
+        initTemplates();
+        
+        // Inicjalizacja automatycznego czyszczenia historii
+        initAutoPurge();
+        
+        // Inicjalizacja wyboru modelu AI
+        initModelSelection();
+        
+        // Inicjalizacja testowania API
+        initApiTesting();
+        
+        // Inicjalizacja zamykania powiadomień
+        initNotices();
+        
+        // Inicjalizacja przycisku odświeżania modeli
+        initRefreshModels();
+        
+        // Inicjalizacja walidacji formularza
+        initFormValidation();
+    }
+    
+    /**
+     * Obsługa zakładek
+     */
+    function initTabs() {
         $('.aica-tab-item').on('click', function() {
             // Usunięcie aktywnej klasy z wszystkich zakładek
             $('.aica-tab-item').removeClass('active');
@@ -32,26 +69,66 @@
             // Pokazanie zawartości aktywnej zakładki
             $('#' + tabId).addClass('active');
             
-            // Zapisanie aktywnej zakładki w sessionStorage
-            sessionStorage.setItem('aica_active_tab', tabId);
+            // Zapisanie aktywnej zakładki w localStorage
+            localStorage.setItem('aica_active_tab', tabId);
         });
         
-        // Przywrócenie aktywnej zakładki z sessionStorage
-        var activeTab = sessionStorage.getItem('aica_active_tab');
-        if (activeTab) {
+        // Przywrócenie aktywnej zakładki z localStorage
+        var activeTab = localStorage.getItem('aica_active_tab');
+        if (activeTab && $('#' + activeTab).length) {
             $('.aica-tab-item[data-tab="' + activeTab + '"]').trigger('click');
         }
-        
-        // Obsługa pola z zakresem
+    }
+    
+    /**
+     * Obsługa pól z zakresem (range inputs)
+     */
+    function initRangeFields() {
+        // Obsługa pola z zakresem dla tokenów
         $('#aica_max_tokens_range').on('input', function() {
             $('#aica_max_tokens').val($(this).val());
         });
         
         $('#aica_max_tokens').on('input', function() {
+            const value = parseInt($(this).val());
+            const min = parseInt($(this).attr('min'));
+            const max = parseInt($(this).attr('max'));
+            
+            if (value < min) {
+                $(this).val(min);
+            } else if (value > max) {
+                $(this).val(max);
+            }
+            
             $('#aica_max_tokens_range').val($(this).val());
         });
         
-        // Obsługa przycisków pokaż/ukryj hasło
+        // Obsługa pola z zakresem dla temperatury
+        if ($('#aica_temperature_range').length) {
+            $('#aica_temperature_range').on('input', function() {
+                $('#aica_temperature').val($(this).val());
+            });
+            
+            $('#aica_temperature').on('input', function() {
+                const value = parseFloat($(this).val());
+                const min = parseFloat($(this).attr('min'));
+                const max = parseFloat($(this).attr('max'));
+                
+                if (value < min) {
+                    $(this).val(min);
+                } else if (value > max) {
+                    $(this).val(max);
+                }
+                
+                $('#aica_temperature_range').val($(this).val());
+            });
+        }
+    }
+    
+    /**
+     * Obsługa przycisków pokaż/ukryj hasło
+     */
+    function initPasswordToggles() {
         $('.aica-toggle-password').on('click', function() {
             var input = $(this).siblings('input');
             var icon = $(this).find('.dashicons');
@@ -64,8 +141,30 @@
                 icon.removeClass('dashicons-hidden').addClass('dashicons-visibility');
             }
         });
-        
-        // Obsługa pola tagów z rozszerzeniami plików
+    }
+    
+    /**
+     * Obsługa zamykania powiadomień
+     */
+    function initNotices() {
+        $('.aica-notice-dismiss').on('click', function() {
+            $(this).closest('.aica-notice').slideUp(300, function() {
+                $(this).remove();
+            });
+        });
+
+        // Automatyczne zamknięcie powiadomień po 5 sekundach
+        setTimeout(function() {
+            $('.aica-notice').slideUp(300, function() {
+                $(this).remove();
+            });
+        }, 5000);
+    }
+    
+    /**
+     * Obsługa pola tagów z rozszerzeniami plików
+     */
+    function initTagsField() {
         function updateExtensionsField() {
             var extensions = [];
             $('.aica-tag').each(function() {
@@ -122,7 +221,98 @@
             $(this).parent().remove();
             updateExtensionsField();
         });
-        
+    }
+    
+    /**
+     * Obsługa szablonów promptów
+     */
+    function initTemplates() {
+        if ($('#aica-templates-container').length) {
+            let templateCount = $('.aica-template-item').length;
+            
+            $('#add-template').on('click', function() {
+                const template = $('#template-item-template').html().replace(/__INDEX__/g, templateCount);
+                
+                $('#aica-templates-container').append(template);
+                templateCount++;
+            });
+            
+            $(document).on('click', '.aica-template-delete', function() {
+                $(this).closest('.aica-template-item').slideUp(300, function() {
+                    $(this).remove();
+                });
+            });
+        }
+    }
+    
+    /**
+     * Obsługa automatycznego czyszczenia historii
+     */
+    function initAutoPurge() {
+        if ($('#aica_auto_purge_enabled').length) {
+            $('#aica_auto_purge_enabled').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#aica_auto_purge_days').prop('disabled', false);
+                } else {
+                    $('#aica_auto_purge_days').prop('disabled', true);
+                }
+            });
+        }
+    }
+    
+    /**
+     * Obsługa wyboru modelu AI
+     */
+    function initModelSelection() {
+        if ($('.aica-model-card').length) {
+            $('.aica-model-card input[type="radio"]').on('change', function() {
+                $('.aica-model-card').removeClass('selected');
+                $(this).closest('.aica-model-card').addClass('selected');
+            });
+        }
+    }
+    
+    /**
+     * Obsługa przycisku odświeżania modeli
+     */
+    function initRefreshModels() {
+        $('#refresh-models').on('click', function() {
+            var button = $(this);
+            var originalText = button.html();
+            
+            button.html('<span class="aica-spinner"></span> ' + (aica_data.i18n.refreshing_models || 'Odświeżanie...'));
+            button.prop('disabled', true);
+            
+            $.ajax({
+                url: aica_data.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'aica_refresh_models',
+                    nonce: aica_data.settings_nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Odświeżenie strony, aby pokazać zaktualizowane modele
+                        location.reload();
+                    } else {
+                        button.html(originalText);
+                        button.prop('disabled', false);
+                        alert(response.data.message || 'Nie udało się odświeżyć modeli.');
+                    }
+                },
+                error: function() {
+                    button.html(originalText);
+                    button.prop('disabled', false);
+                    alert('Wystąpił błąd podczas odświeżania modeli.');
+                }
+            });
+        });
+    }
+    
+    /**
+     * Obsługa testowania połączenia z API
+     */
+    function initApiTesting() {
         // Testowanie połączenia z API Claude
         $('#test-claude-api').on('click', function() {
             var button = $(this);
@@ -304,8 +494,12 @@
                 }
             });
         });
-        
-        // Walidacja formularza przed wysłaniem
+    }
+    
+    /**
+     * Walidacja formularza przed wysłaniem
+     */
+    function initFormValidation() {
         $('#aica-settings-form').on('submit', function(e) {
             var valid = true;
             var firstError = null;
@@ -334,25 +528,6 @@
                     firstError.focus();
                 }
             }
-        });
-        
-        // Dodatkowy kod bezpośrednio obsługujący przyciski pokazywania/ukrywania hasła
-        // Ta część jest dodana jako dodatkowe zabezpieczenie, aby przyciski działały nawet 
-        // jeśli wcześniejsza obsługa nie zostanie poprawnie zainicjalizowana
-        $('.aica-toggle-password').each(function() {
-            $(this).on('click', function(e) {
-                e.preventDefault();
-                var input = $(this).closest('.aica-api-key-field').find('input');
-                var icon = $(this).find('.dashicons');
-                
-                if (input.attr('type') === 'password') {
-                    input.attr('type', 'text');
-                    icon.removeClass('dashicons-visibility').addClass('dashicons-hidden');
-                } else {
-                    input.attr('type', 'password');
-                    icon.removeClass('dashicons-hidden').addClass('dashicons-visibility');
-                }
-            });
         });
     }
 })(jQuery);

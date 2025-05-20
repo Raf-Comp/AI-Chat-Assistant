@@ -11,6 +11,9 @@ class Main {
         $this->ajax_handler = new \AICA\Ajax\Handler();
         $this->admin_pages = new \AICA\Admin\PageManager();
         $this->admin_init = new \AICA\Admin\Init();
+        
+        // Dodanie hook'a do odświeżania modeli
+        add_action('admin_post_aica_refresh_models', [$this, 'handle_refresh_models']);
     }
 
     public function run() {
@@ -18,7 +21,7 @@ class Main {
         add_action('admin_menu', [$this->admin_pages, 'register_menu']);
         
         // Inicjalizacja handlera AJAX
-        $this->ajax_handler->init();
+        // już zainicjalizowany w konstruktorze
         
         // Dodajemy hook inicjalizujący użytkownika przy pierwszym ładowaniu wtyczki
         add_action('init', [$this, 'initialize_current_user']);
@@ -31,6 +34,165 @@ class Main {
         
         // Dodajemy hook do rejestracji styli i skryptów repozytoriów
         add_action('admin_enqueue_scripts', [$this, 'enqueue_repositories_assets']);
+        
+        // Dodajemy hook do zapisywania ustawień
+        add_action('admin_post_save_aica_settings', [$this, 'save_settings']);
+    }
+    
+    /**
+     * Obsługa odświeżania modeli
+     */
+    public function handle_refresh_models() {
+        // Sprawdzenie nonce
+        if (!isset($_POST['aica_settings_nonce']) || !wp_verify_nonce($_POST['aica_settings_nonce'], 'aica_settings_nonce')) {
+            wp_die(__('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant'));
+        }
+        
+        // Sprawdzenie uprawnień
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Nie masz uprawnień do wykonania tej operacji.', 'ai-chat-assistant'));
+        }
+        
+        // Pobranie klucza API
+        $api_key = aica_get_option('claude_api_key', '');
+        
+        if (empty($api_key)) {
+            // Przekierowanie z komunikatem błędu
+            wp_redirect(add_query_arg([
+                'page' => 'ai-chat-assistant-settings',
+                'aica_error' => 'no_api_key'
+            ], admin_url('admin.php')));
+            exit;
+        }
+        
+        // Pobranie dostępnych modeli
+        $claude_client = new \AICA\API\ClaudeClient($api_key);
+        $models = $claude_client->get_available_models();
+        
+        if (empty($models)) {
+            // Przekierowanie z komunikatem błędu
+            wp_redirect(add_query_arg([
+                'page' => 'ai-chat-assistant-settings',
+                'aica_error' => 'models_fetch_failed'
+            ], admin_url('admin.php')));
+            exit;
+        }
+        
+        // Aktualizacja czasu ostatniego odświeżenia
+        aica_update_option('claude_models_last_update', current_time('mysql'));
+        
+        // Przekierowanie z komunikatem sukcesu
+        wp_redirect(add_query_arg([
+            'page' => 'ai-chat-assistant-settings',
+            'aica_success' => 'models_refreshed'
+        ], admin_url('admin.php')));
+        exit;
+    }
+    
+    /**
+     * Zapisywanie ustawień
+     */
+    public function save_settings() {
+        // Sprawdzenie nonce
+        if (!isset($_POST['aica_settings_nonce']) || !wp_verify_nonce($_POST['aica_settings_nonce'], 'aica_settings_nonce')) {
+            wp_die(__('Błąd bezpieczeństwa. Odśwież stronę i spróbuj ponownie.', 'ai-chat-assistant'));
+        }
+        
+        // Sprawdzenie uprawnień
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Nie masz uprawnień do wykonania tej operacji.', 'ai-chat-assistant'));
+        }
+        
+        // Zapisanie ustawień Claude API
+        if (isset($_POST['aica_claude_api_key'])) {
+            $api_key = sanitize_text_field($_POST['aica_claude_api_key']);
+            aica_update_option('claude_api_key', $api_key);
+        }
+        
+        if (isset($_POST['aica_claude_model'])) {
+            $model = sanitize_text_field($_POST['aica_claude_model']);
+            aica_update_option('claude_model', $model);
+        }
+        
+        if (isset($_POST['aica_max_tokens'])) {
+            $max_tokens = intval($_POST['aica_max_tokens']);
+            aica_update_option('max_tokens', $max_tokens);
+        }
+        
+        if (isset($_POST['aica_temperature'])) {
+            $temperature = floatval($_POST['aica_temperature']);
+            $temperature = max(0, min(1, $temperature)); // Ograniczenie do zakresu 0-1
+            aica_update_option('temperature', $temperature);
+        }
+        
+        // Zapisanie ustawień repozytoriów
+        if (isset($_POST['aica_github_token'])) {
+            $github_token = sanitize_text_field($_POST['aica_github_token']);
+            aica_update_option('github_token', $github_token);
+        }
+        
+        if (isset($_POST['aica_gitlab_token'])) {
+            $gitlab_token = sanitize_text_field($_POST['aica_gitlab_token']);
+            aica_update_option('gitlab_token', $gitlab_token);
+        }
+        
+        if (isset($_POST['aica_bitbucket_username'])) {
+            $bitbucket_username = sanitize_text_field($_POST['aica_bitbucket_username']);
+            aica_update_option('bitbucket_username', $bitbucket_username);
+        }
+        
+        if (isset($_POST['aica_bitbucket_app_password'])) {
+            $bitbucket_password = sanitize_text_field($_POST['aica_bitbucket_app_password']);
+            aica_update_option('bitbucket_app_password', $bitbucket_password);
+        }
+        
+        // Zapisanie ustawień ogólnych
+        if (isset($_POST['aica_allowed_file_extensions'])) {
+            $extensions = sanitize_text_field($_POST['aica_allowed_file_extensions']);
+            aica_update_option('allowed_file_extensions', $extensions);
+        }
+        
+        if (isset($_POST['aica_debug_mode'])) {
+            $debug_mode = $_POST['aica_debug_mode'] == '1';
+            aica_update_option('debug_mode', $debug_mode);
+        } else {
+            aica_update_option('debug_mode', false);
+        }
+        
+        if (isset($_POST['aica_auto_purge_enabled'])) {
+            $auto_purge_enabled = $_POST['aica_auto_purge_enabled'] == '1';
+            aica_update_option('auto_purge_enabled', $auto_purge_enabled);
+        } else {
+            aica_update_option('auto_purge_enabled', false);
+        }
+        
+        if (isset($_POST['aica_auto_purge_days'])) {
+            $auto_purge_days = intval($_POST['aica_auto_purge_days']);
+            aica_update_option('auto_purge_days', $auto_purge_days);
+        }
+        
+        // Zapisanie szablonów promptów
+        if (isset($_POST['aica_prompt_templates']) && is_array($_POST['aica_prompt_templates'])) {
+            $templates = [];
+            
+            foreach ($_POST['aica_prompt_templates'] as $template) {
+                if (!empty($template['name']) && !empty($template['prompt'])) {
+                    $templates[] = [
+                        'name' => sanitize_text_field($template['name']),
+                        'prompt' => sanitize_textarea_field($template['prompt'])
+                    ];
+                }
+            }
+            
+            aica_update_option('prompt_templates', $templates);
+        }
+        
+        // Przekierowanie z komunikatem sukcesu
+        wp_redirect(add_query_arg([
+            'page' => 'ai-chat-assistant-settings',
+            'settings-updated' => 'true'
+        ], admin_url('admin.php')));
+        exit;
     }
     
     /**
@@ -121,7 +283,11 @@ class Main {
                 'loading' => __('Ładowanie...', 'ai-chat-assistant'),
                 'sending' => __('Wysyłanie...', 'ai-chat-assistant'),
                 'saved' => __('Zapisano', 'ai-chat-assistant'),
-                'save_error' => __('Błąd zapisywania', 'ai-chat-assistant')
+                'save_error' => __('Błąd zapisywania', 'ai-chat-assistant'),
+                'testing' => __('Testowanie...', 'ai-chat-assistant'),
+                'connection_success' => __('Połączenie działa poprawnie', 'ai-chat-assistant'),
+                'connection_error' => __('Błąd połączenia', 'ai-chat-assistant'),
+                'refreshing_models' => __('Odświeżanie listy modeli...', 'ai-chat-assistant')
             ]
         ]);
     }

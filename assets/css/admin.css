@@ -1,91 +1,68 @@
-/**
- * Style administracyjne dla wtyczki AI Chat Assistant
- */
-
-:root {
-    --aica-primary: #2271b1;
-    --aica-primary-light: #72aee6;
-    --aica-primary-dark: #135e96;
-    --aica-success: #00a32a;
-    --aica-success-light: #edfaef;
-    --aica-warning: #dba617;
-    --aica-warning-light: #fcf9e8;
-    --aica-error: #d63638;
-    --aica-error-light: #fcf0f1;
-    --aica-text: #1e1e1e;
-    --aica-text-light: #757575;
-    --aica-border: #e0e0e0;
-    --aica-bg-light: #f9f9f9;
-    --aica-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+/* Style dla pola hasła */
+.aica-password-field {
+    position: relative;
+    display: flex;
+    align-items: center;
 }
 
-/* Admin Container */
-.aica-admin-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+.aica-password-field input[type="password"],
+.aica-password-field input[type="text"] {
+    flex-grow: 1;
+    padding-right: 40px;
 }
 
-.aica-header {
-    margin-bottom: 25px;
+.aica-toggle-password {
+    position: absolute !important;
+    right: 1px;
+    top: 1px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 8px !important;
+    height: calc(100% - 2px) !important;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.aica-header h1 {
-    font-size: 24px;
-    font-weight: 600;
-    margin: 0;
-    padding: 0;
+.aica-toggle-password:hover {
+    color: #000;
 }
 
-/* Notices */
-.aica-notice {
-    padding: 12px 16px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-    border-left: 4px solid transparent;
+.aica-toggle-password .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
 }
 
-.aica-notice p {
-    margin: 0;
+/* Style dla testowania API */
+.aica-api-test {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.aica-notice-success {
-    background-color: var(--aica-success-light);
-    border-left-color: var(--aica-success);
-}
-
-.aica-notice-warning {
-    background-color: var(--aica-warning-light);
-    border-left-color: var(--aica-warning);
-}
-
-.aica-notice-error {
-    background-color: var(--aica-error-light);
-    border-left-color: var(--aica-error);
-}
-
-/* Form Fields */
-.aica-field-row input.error {
-    border-color: var(--aica-error);
-}
-
-/* API Test Result */
 .aica-api-test-result {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-top: 5px;
+    font-size: 13px;
 }
 
 .aica-api-test-result.loading {
-    color: var(--aica-text-light);
+    color: #666;
 }
 
 .aica-api-test-result.success {
-    color: var(--aica-success);
+    color: #00a32a;
 }
 
 .aica-api-test-result.error {
-    color: var(--aica-error);
+    color: #d63638;
 }
 
 .aica-spinner {
@@ -93,7 +70,7 @@
     width: 16px;
     height: 16px;
     border: 2px solid rgba(0, 0, 0, 0.1);
-    border-top: 2px solid var(--aica-primary);
+    border-top: 2px solid #2271b1;
     border-radius: 50%;
     animation: aica-spin 1s linear infinite;
 }

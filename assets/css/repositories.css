@@ -1,338 +1,575 @@
+/* Zmienne kolorystyczne */
+:root {
+  --primary-color: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary-color: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
 /* Styl dla kontenera repozytoriów */
 .aica-repositories-container {
-    display: flex;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+  display: flex;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+  margin-top: 20px;
 }
 
 /* Sidebar */
 .aica-sidebar {
-    width: 250px;
-    background-color: #f9f9f9;
-    border-right: 1px solid #e0e0e0;
-    padding: 20px 0;
+  width: 280px;
+  background-color: var(--secondary-color);
+  border-right: 1px solid var(--border-color);
+  padding: 24px 0;
 }
 
 .aica-repo-sources,
 .aica-repo-filters {
-    padding: 0 20px;
-    margin-bottom: 25px;
+  padding: 0 20px;
+  margin-bottom: 25px;
 }
 
 .aica-repo-sources h3,
 .aica-repo-filters h3 {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0 0 15px 0;
-    padding: 0;
-    text-transform: uppercase;
-    color: #757575;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 15px 0;
+  padding: 0;
+  text-transform: uppercase;
+  color: var(--text-secondary);
 }
 
-/* Source List */
+/* Lista źródeł */
 .aica-sources-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .aica-source-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-    margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  margin-bottom: 6px;
 }
 
 .aica-source-item:hover {
-    background-color: rgba(0, 0, 0, 0.03);
+  background-color: rgba(79, 70, 229, 0.08);
 }
 
 .aica-source-item.active {
-    background-color: #72aee6;
-    color: #fff;
+  background-color: var(--primary-color);
+  color: #fff;
 }
 
 .aica-source-item .dashicons {
-    margin-right: 10px;
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+  margin-right: 10px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 
 .aica-source-name {
-    flex: 1;
-    font-size: 14px;
+  flex: 1;
+  font-size: 14px;
 }
 
 .aica-source-count {
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-    padding: 2px 8px;
-    font-size: 12px;
-    min-width: 25px;
-    text-align: center;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: 12px;
+  min-width: 25px;
+  text-align: center;
 }
 
 .aica-source-item.active .aica-source-count {
-    background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Content */
+/* Treść */
 .aica-content {
-    flex: 1;
-    padding: 20px;
-    overflow: auto;
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
 }
 
 .aica-repos-tab {
-    display: none;
+  display: none;
 }
 
 .aica-repos-tab.active {
-    display: block;
+  display: block;
 }
 
-/* Empty state */
+/* Stan pusty */
 .aica-empty-state {
-    text-align: center;
-    padding: 60px 20px;
+  text-align: center;
+  padding: 60px 20px;
 }
 
 .aica-empty-icon {
-    font-size: 48px;
-    color: #757575;
-    opacity: 0.5;
-    margin-bottom: 15px;
+  font-size: 48px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin-bottom: 15px;
 }
 
 .aica-empty-icon .dashicons {
-    font-size: 48px;
-    width: 48px;
-    height: 48px;
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
 }
 
 .aica-empty-state h2 {
-    font-size: 20px;
-    margin: 0 0 10px 0;
-    padding: 0;
+  font-size: 20px;
+  margin: 0 0 10px 0;
+  padding: 0;
 }
 
 .aica-empty-state p {
-    color: #757575;
-    margin: 0 0 20px 0;
+  color: var(--text-secondary);
+  margin: 0 0 20px 0;
 }
 
-/* Repository Grid */
+/* Siatka repozytoriów */
 .aica-repositories-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
 }
 
-/* Repository Card */
+/* Karta repozytorium */
 .aica-repository-card {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    overflow: hidden;
-    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .aica-repository-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+  box-shadow: var(--box-shadow);
+  transform: translateY(-3px);
 }
 
 .aica-repo-header {
-    padding: 16px;
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #e0e0e0;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .aica-repo-icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f9f9f9;
-    border-radius: 6px;
-    margin-right: 12px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--secondary-color);
+  border-radius: 8px;
+  margin-right: 12px;
 }
 
 .aica-repo-icon .dashicons {
-    font-size: 20px;
-    color: #2271b1;
+  font-size: 20px;
+  color: var(--primary-color);
 }
 
 .aica-repo-title {
-    flex: 1;
+  flex: 1;
 }
 
 .aica-repo-title h3 {
-    margin: 0;
-    padding: 0;
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.3;
+  margin: 0;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .aica-repo-owner {
-    font-size: 12px;
-    color: #757575;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .aica-repo-actions {
-    margin-left: 10px;
+  margin-left: 10px;
 }
 
-/* Dropdown Menu */
+/* Menu rozwijane */
 .aica-dropdown {
-    position: relative;
+  position: relative;
 }
 
 .aica-dropdown-toggle {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 3px;
-    color: #757575;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s ease, color 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 3px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .aica-dropdown-toggle:hover {
-    background-color: #f0f0f0;
-    color: #1e1e1e;
+  background-color: var(--secondary-color);
+  color: var(--text-primary);
 }
 
 .aica-dropdown-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    padding: 8px 0;
-    z-index: 100;
-    display: none;
-    min-width: 200px;
-    margin-top: 5px;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--box-shadow);
+  padding: 8px 0;
+  z-index: 100;
+  display: none;
+  min-width: 200px;
+  margin-top: 5px;
+  border: 1px solid var(--border-color);
 }
 
 .aica-dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    color: #1e1e1e;
-    text-decoration: none;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
 }
 
 .aica-dropdown-item:hover {
-    background-color: #f0f0f0;
-    color: #1e1e1e;
+  background-color: var(--secondary-color);
+  color: var(--text-primary);
 }
 
 .aica-dropdown-item .dashicons {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 .aica-dropdown-divider {
-    height: 1px;
-    background-color: #e0e0e0;
-    margin: 6px 0;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 6px 0;
 }
 
 .text-danger {
-    color: #d63638;
+  color: var(--error-color);
 }
 
 .text-danger:hover {
-    background-color: #fcf0f1;
-    color: #d63638;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
 }
 
-/* File Browser */
+/* Przeglądarka plików */
 .aica-file-browser-container {
-    display: flex;
-    height: 70vh;
+  display: flex;
+  height: 75vh;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--box-shadow);
 }
 
 .aica-file-browser-sidebar {
-    width: 300px;
-    border-right: 1px solid #e0e0e0;
-    display: flex;
-    flex-direction: column;
+  width: 300px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
 }
 
 .aica-file-browser-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .aica-repo-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .aica-repo-name {
-    font-weight: 600;
-    font-size: 14px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.aica-file-tree-item {
+  margin-bottom: 2px;
+}
+
+.aica-file-tree-folder,
+.aica-file-tree-file {
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aica-file-tree-folder:hover,
+.aica-file-tree-file:hover {
+  background-color: rgba(79, 70, 229, 0.08);
+}
+
+.aica-file-tree-file.active {
+  background-color: rgba(79, 70, 229, 0.15);
+  font-weight: 500;
+}
+
+/* Powiadomienia */
+.aica-notice {
+  padding: 16px;
+  margin: 20px 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aica-notice-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #065f46;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.aica-notice-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 /* Animacje i stany */
 .aica-initialized .aica-repository-card {
-    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
 }
 
 .aica-file-match {
-    background-color: rgba(255, 240, 120, 0.3);
-    font-weight: bold;
+  background-color: rgba(255, 240, 120, 0.3);
+  font-weight: bold;
 }
 
 .aica-card-refreshing {
-    opacity: 0.6;
-    pointer-events: none;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.aica-loading {
+  position: relative;
+  opacity: 0.7;
+}
+
+.aica-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(255, 255, 255, 0.5);
+  background-image: url('../img/loading.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 24px;
+  border-radius: 4px;
+}
+
+/* Przyciski */
+.aica-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  gap: 6px;
+}
+
+.aica-button-primary {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+}
+
+.aica-button-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.aica-button-secondary {
+  background-color: var(--secondary-color);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.aica-button-secondary:hover {
+  background-color: #e5e7eb;
 }
 
 @keyframes aica-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-/* Style dla komunikatów */
-.aica-notice {
-    padding: 12px 15px;
-    margin: 15px 0;
-    border-radius: 4px;
+/* Tryb ciemny */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: #6366f1;
+    --primary-hover: #818cf8;
+    --secondary-color: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --border-color: #374151;
+    --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18);
+  }
+  
+  body.aica-dark-mode .aica-repositories-container,
+  body.aica-dark-mode .aica-repository-card,
+  body.aica-dark-mode .aica-file-browser-container {
+    background: #111827;
+    color: var(--text-primary);
+  }
+  
+  body.aica-dark-mode .aica-sidebar {
+    background-color: #1f2937;
+    border-right-color: #374151;
+  }
+  
+  body.aica-dark-mode .aica-source-item:hover {
+    background-color: rgba(99, 102, 241, 0.15);
+  }
+  
+  body.aica-dark-mode .aica-file-content {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+  
+  body.aica-dark-mode .aica-file-tree-folder:hover,
+  body.aica-dark-mode .aica-file-tree-file:hover {
+    background-color: rgba(99, 102, 241, 0.15);
+  }
 }
 
-.aica-notice-success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+/* Przełącznik trybu ciemnego */
+.aica-dark-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.aica-notice-error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+.aica-dark-mode-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.aica-dark-mode .aica-dark-mode-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+  .aica-repositories-container {
+    flex-direction: column;
+  }
+  
+  .aica-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .aica-repositories-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  
+  .aica-file-browser-container {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .aica-file-browser-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+/* Dodaj te style do pliku repositories.css */
+
+/* Style dla błędów formularza */
+.aica-form-error {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 15px 0;
+  display: none;
+}
+
+.aica-field-error {
+  border-color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+/* Style dla formularza dodawania repozytorium */
+.aica-add-repo-form {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: var(--box-shadow);
+  margin-bottom: 20px;
+}
+
+.aica-form-group {
+  margin-bottom: 16px;
+}
+
+.aica-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.aica-form-group input[type="text"],
+.aica-form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.aica-form-group input[type="text"]:focus,
+.aica-form-group textarea:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  outline: none;
 }

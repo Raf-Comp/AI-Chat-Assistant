@@ -438,3 +438,9 @@ class RepositoriesPage {
         }
     }
 }
+
+add_action('admin_enqueue_scripts', function ($hook) {
+    if ($hook === 'ai-chat-assistant_page_ai-chat-assistant-repositories') {
+        wp_enqueue_style('aica-style-repositories', plugin_dir_url(__DIR__) . '../../assets/css/repositories.css');
+    }
+});

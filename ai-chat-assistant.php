@@ -187,3 +187,11 @@ class AI_Chat_Assistant {
 
 // Inicjalizacja wtyczki
 AI_Chat_Assistant::get_instance();
+
+function aica_enqueue_frontend_assets() {
+    if (!is_admin()) {
+        wp_enqueue_style('aica-modern-chat', plugin_dir_url(__FILE__) . 'assets/css/modern-chat.css', [], '1.0');
+        wp_enqueue_script('aica-modern-chat', plugin_dir_url(__FILE__) . 'assets/js/modern-chat.js', ['jquery'], '1.0', true);
+    }
+}
+add_action('wp_enqueue_scripts', 'aica_enqueue_frontend_assets');

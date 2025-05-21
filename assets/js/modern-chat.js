@@ -35,21 +35,30 @@
         // Wyświetlenie aktualnie wybranego modelu (pobieranego z globalnych ustawień)
         $('#aica-model-name').text(aica_data.settings.claude_model || 'claude-3-haiku-20240307');
         
+        // Inicjalizacja stanu przycisku wysyłania
+        updateSendButtonState();
+        
         console.log('AI Chat Assistant zainicjalizowany');
     }
     
     // Aktualizacja motywu strony
     function updateTheme() {
         if (isDarkMode) {
-            document.body.classList.add('dark-mode');
+            $('body').addClass('dark-mode');
+            $('#aica-theme-toggle').find('.dashicons')
+                .removeClass('dashicons-admin-appearance')
+                .addClass('dashicons-sun');
         } else {
-            document.body.classList.remove('dark-mode');
+            $('body').removeClass('dark-mode');
+            $('#aica-theme-toggle').find('.dashicons')
+                .removeClass('dashicons-sun')
+                .addClass('dashicons-admin-appearance');
         }
         
         if (isCompactMode) {
-            document.body.classList.add('aica-compact-view');
+            $('body').addClass('aica-compact-view');
         } else {
-            document.body.classList.remove('aica-compact-view');
+            $('body').removeClass('aica-compact-view');
         }
     }
     
@@ -154,9 +163,19 @@
         
         // Obsługa klawiszy
         $('#aica-message-input').on('keydown', function(e) {
-            // Wysłanie wiadomości na Ctrl+Enter
-            if (e.ctrlKey && e.keyCode === 13) {
+            // Wysłanie wiadomości na Enter (bez Shift)
+            if (e.keyCode === 13 && !e.shiftKey) {
+                e.preventDefault();
                 sendMessage();
+            }
+            // Obsługa Ctrl+Enter dla nowej linii
+            else if (e.ctrlKey && e.keyCode === 13) {
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                const value = this.value;
+                this.value = value.substring(0, start) + '\n' + value.substring(end);
+                this.selectionStart = this.selectionEnd = start + 1;
+                e.preventDefault();
             }
         });
 
@@ -238,6 +257,7 @@
         isDarkMode = !isDarkMode;
         localStorage.setItem('aica_dark_mode', isDarkMode);
         updateTheme();
+        $(document).trigger('aica_theme_changed', isDarkMode);
     }
     
     // Funkcja do wysyłania wiadomości
@@ -268,6 +288,14 @@
         // Pokazanie wskaźnika ładowania
         showTypingIndicator();
         
+        // Sprawdzenie czy API jest skonfigurowane
+        if (!aica_data.settings.claude_api_key) {
+            hideTypingIndicator();
+            appendMessage('system', 'Klucz API Claude nie jest skonfigurowany. Przejdź do ustawień, aby go dodać.');
+            isProcessing = false;
+            return;
+        }
+        
         // Wywołanie API Claude.ai
         callClaudeAPI(message)
             .then(response => {
@@ -285,7 +313,7 @@
             .catch(error => {
                 console.error('Błąd komunikacji z API:', error);
                 hideTypingIndicator();
-                appendMessage('system', 'Wystąpił błąd podczas komunikacji z API. Spróbuj ponownie.');
+                appendMessage('system', 'Wystąpił błąd podczas komunikacji z API: ' + error.message);
                 isProcessing = false;
             });
     }
@@ -312,12 +340,22 @@
                     if (response.success) {
                         resolve(response.data);
                     } else {
-                        reject(response.data.message || 'Błąd API');
+                        const errorMsg = response.data && response.data.message 
+                            ? response.data.message 
+                            : 'Nieznany błąd API';
+                        reject(new Error(errorMsg));
                     }
                 },
                 error: function(xhr, status, error) {
-                    reject(error);
-                }
+                    if (xhr.status === 401) {
+                        reject(new Error('Błąd autoryzacji. Sprawdź klucz API Claude.'));
+                    } else if (xhr.status === 0) {
+                        reject(new Error('Brak połączenia z serwerem. Sprawdź swoje połączenie internetowe.'));
+                    } else {
+                        reject(new Error(`Błąd HTTP ${xhr.status}: ${error}`));
+                    }
+                },
+                timeout: 60000
             });
         });
     }
@@ -362,38 +400,47 @@
         
         // Inicjalizacja podświetlania składni, jeśli jest dostępne
         if (window.Prism) {
-            Prism.highlightAll();
+            try {
+                Prism.highlightAll();
+            } catch (e) {
+                console.error('Błąd podświetlania składni:', e);
+            }
         }
     }
 
     // Funkcja do formatowania markdown w odpowiedzi
     function formatMarkdown(content) {
-        // Obsługa bloków kodu
-        content = content.replace(/```([a-z]*)\n([\s\S]*?)```/g, function(match, language, code) {
-            return `<pre><code class="language-${language}">${escapeHTML(code)}</code></pre>`;
-        });
-        
-        // Obsługa pojedynczych linii kodu
-        content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
-        
-        // Obsługa pogrubienia
-        content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        
-        // Obsługa kursywy
-        content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        
-        // Obsługa list nieuporządkowanych
-        content = content.replace(/^\s*-\s+(.+)$/gm, '<li>$1</li>');
-        content = content.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-        
-        // Obsługa list uporządkowanych
-        content = content.replace(/^\s*(\d+)\.\s+(.+)$/gm, '<li>$2</li>');
-        content = content.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
-        
-        // Obsługa linków
-        content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-        
-        return content;
+        try {
+            // Obsługa bloków kodu
+            content = content.replace(/```([a-z]*)\n([\s\S]*?)```/g, function(match, language, code) {
+                return `<pre><code class="language-${language}">${escapeHTML(code)}</code></pre>`;
+            });
+            
+            // Obsługa pojedynczych linii kodu
+            content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Obsługa pogrubienia
+            content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            
+            // Obsługa kursywy
+            content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            
+            // Obsługa list nieuporządkowanych
+            content = content.replace(/^\s*-\s+(.+)$/gm, '<li>$1</li>');
+            content = content.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+            
+            // Obsługa list uporządkowanych
+            content = content.replace(/^\s*(\d+)\.\s+(.+)$/gm, '<li>$2</li>');
+            content = content.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+            
+            // Obsługa linków
+            content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            
+            return content;
+        } catch (e) {
+            console.error('Błąd formatowania markdown:', e);
+            return content;
+        }
     }
 
     // Funkcja do escapowania HTML
@@ -613,7 +660,11 @@
                     
                     // Inicjalizacja podświetlania składni, jeśli jest dostępne
                     if (window.Prism) {
-                        Prism.highlightAll();
+                        try {
+                            Prism.highlightAll();
+                        } catch (e) {
+                            console.error('Błąd podświetlania składni:', e);
+                        }
                     }
                     
                     // Zachowanie pozycji przewijania
@@ -689,7 +740,7 @@
         }
     }
     
-    // Zapisanie wiadomości do bazy danych
+    // Zapisanie wiadomości do bazy danych (dokończenie funkcji saveMessage)
     function saveMessage(userMessage, assistantResponse) {
         $.ajax({
             url: aica_data.ajax_url,
@@ -704,6 +755,7 @@
             success: function(response) {
                 if (!response.success) {
                     console.error('Błąd zapisywania wiadomości:', response.data.message);
+                    showNotification('error', 'Nie udało się zapisać wiadomości.');
                 }
                 
                 // Aktualizacja listy sesji
@@ -711,6 +763,7 @@
             },
             error: function(xhr, status, error) {
                 console.error('Błąd podczas zapisywania wiadomości:', error);
+                showNotification('error', 'Wystąpił błąd podczas zapisywania wiadomości.');
             }
         });
     }
@@ -730,10 +783,12 @@
                     renderSessionsList(response.data.sessions);
                 } else {
                     console.error('Błąd pobierania listy sesji:', response.data.message);
+                    showNotification('error', 'Nie udało się załadować listy sesji.');
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Błąd podczas pobierania listy sesji:', error);
+                showNotification('error', 'Wystąpił błąd podczas pobierania listy sesji.');
             }
         });
     }
@@ -810,8 +865,270 @@
             },
             error: function(xhr, status, error) {
                 console.error('Błąd ładowania repozytoriów:', error);
+                $('#aica-repositories-list').html('<div class="aica-empty-message">Wystąpił błąd podczas ładowania repozytoriów</div>');
             }
         });
+    }
+    
+    // Funkcja do ładowania repozytorium
+    function loadRepository(repoId) {
+        // Zapisanie bieżącego repozytorium
+        currentRepositoryId = repoId;
+        
+        // Pokazanie wskaźnika ładowania
+        $('#aica-repositories-list').html('<div class="aica-loading"><div class="aica-spinner"></div><span>Ładowanie plików repozytorium...</span></div>');
+        
+        // Wywołanie AJAX do pobrania plików repozytorium
+        $.ajax({
+            url: aica_data.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'aica_get_repository_files',
+                nonce: aica_data.nonce,
+                repository_id: repoId
+            },
+            success: function(response) {
+                if (response.success) {
+                    renderRepositoryFiles(response.data.files, response.data.repository);
+                } else {
+                    console.error('Błąd pobierania plików repozytorium:', response.data.message);
+                    $('#aica-repositories-list').html('<div class="aica-empty-message">Nie udało się załadować plików.</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Błąd podczas pobierania plików repozytorium:', error);
+                $('#aica-repositories-list').html('<div class="aica-empty-message">Wystąpił błąd podczas ładowania plików.</div>');
+            }
+        });
+    }
+    
+    // Funkcja do renderowania plików repozytorium
+    function renderRepositoryFiles(files, repository) {
+        const repositoriesList = $('#aica-repositories-list');
+        
+        // Jeśli nie ma plików, pokaż komunikat
+        if (files.length === 0) {
+            repositoriesList.html('<div class="aica-empty-message">Brak plików w repozytorium.</div>');
+            return;
+        }
+        
+        repositoriesList.empty();
+        
+        // Dodanie nagłówka repozytorium
+        repositoriesList.append(`
+            <div class="aica-repository-header">
+                <div class="aica-repository-title">
+                    <h3>${repository.name}</h3>
+                    <p>${repository.description || ''}</p>
+                </div>
+                <div class="aica-repository-path">
+                    <span>${currentRepositoryPath || '/'}</span>
+                </div>
+            </div>
+        `);
+        
+        // Dodanie przycisku powrotu, jeśli nie jesteśmy w katalogu głównym
+        if (currentRepositoryPath !== '') {
+            const parentPath = currentRepositoryPath.split('/').slice(0, -1).join('/');
+            
+            repositoriesList.append(`
+                <div class="aica-file-item aica-directory" data-path="${parentPath}">
+                    <div class="aica-file-icon">
+                        <span class="dashicons dashicons-arrow-left-alt"></span>
+                    </div>
+                    <div class="aica-file-info">
+                        <div class="aica-file-name">Powrót do katalogu nadrzędnego</div>
+                    </div>
+                </div>
+            `);
+        }
+        
+        // Sortowanie plików - katalogi na początku, potem pliki
+        files.sort((a, b) => {
+            if (a.type === 'dir' && b.type !== 'dir') return -1;
+            if (a.type !== 'dir' && b.type === 'dir') return 1;
+            return a.name.localeCompare(b.name);
+        });
+        
+        // Dodanie plików i katalogów
+        files.forEach(file => {
+            const isDirectory = file.type === 'dir';
+            const icon = isDirectory ? 'dashicons-category' : 'dashicons-media-text';
+            
+            const fileItem = $(`
+                <div class="aica-file-item ${isDirectory ? 'aica-directory' : 'aica-file'}" data-path="${file.path}">
+                    <div class="aica-file-icon">
+                        <span class="dashicons ${icon}"></span>
+                    </div>
+                    <div class="aica-file-info">
+                        <div class="aica-file-name">${file.name}</div>
+                        ${!isDirectory ? `<div class="aica-file-size">${formatFileSize(file.size)}</div>` : ''}
+                    </div>
+                </div>
+            `);
+            
+            // Dodanie obsługi kliknięcia
+            fileItem.on('click', function() {
+                const path = $(this).data('path');
+                
+                if (isDirectory) {
+                    // Aktualizacja ścieżki i załadowanie plików
+                    currentRepositoryPath = path;
+                    loadRepository(currentRepositoryId);
+                } else {
+                    // Załadowanie zawartości pliku
+                    loadFileContent(currentRepositoryId, path);
+                }
+            });
+            
+            repositoriesList.append(fileItem);
+        });
+    }
+    
+    // Funkcja do formatowania rozmiaru pliku
+    function formatFileSize(size) {
+        if (size < 1024) {
+            return size + ' B';
+        } else if (size < 1024 * 1024) {
+            return (size / 1024).toFixed(1) + ' KB';
+        } else if (size < 1024 * 1024 * 1024) {
+            return (size / (1024 * 1024)).toFixed(1) + ' MB';
+        } else {
+            return (size / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        }
+    }
+    
+    // Funkcja do ładowania zawartości pliku
+    function loadFileContent(repoId, filePath) {
+        // Zapisanie bieżącej ścieżki pliku
+        currentFilePath = filePath;
+        
+        // Pokazanie wskaźnika ładowania
+        $('#aica-repositories-list').html('<div class="aica-loading"><div class="aica-spinner"></div><span>Ładowanie zawartości pliku...</span></div>');
+        
+        // Wywołanie AJAX do pobrania zawartości pliku
+        $.ajax({
+            url: aica_data.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'aica_get_file_content',
+                nonce: aica_data.nonce,
+                repository_id: repoId,
+                file_path: filePath
+            },
+            success: function(response) {
+                if (response.success) {
+                    renderFileContent(response.data.content, response.data.file_info);
+                } else {
+                    console.error('Błąd pobierania zawartości pliku:', response.data.message);
+                    $('#aica-repositories-list').html('<div class="aica-empty-message">Nie udało się załadować zawartości pliku.</div>');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Błąd podczas pobierania zawartości pliku:', error);
+                $('#aica-repositories-list').html('<div class="aica-empty-message">Wystąpił błąd podczas ładowania zawartości pliku.</div>');
+            }
+        });
+    }
+    
+    // Funkcja do renderowania zawartości pliku
+    function renderFileContent(content, fileInfo) {
+        const repositoriesList = $('#aica-repositories-list');
+        repositoriesList.empty();
+        
+        // Dodanie nagłówka pliku
+        repositoriesList.append(`
+            <div class="aica-file-header">
+                <div class="aica-file-title">
+                    <h3>${fileInfo.name}</h3>
+                    <p>${fileInfo.path}</p>
+                </div>
+                <div class="aica-file-actions">
+                    <button type="button" class="aica-button aica-button-secondary aica-back-button">
+                        <span class="dashicons dashicons-arrow-left-alt"></span>
+                        Powrót
+                    </button>
+                    <button type="button" class="aica-button aica-button-primary aica-analyze-button">
+                        <span class="dashicons dashicons-admin-tools"></span>
+                        Analizuj plik
+                    </button>
+                </div>
+            </div>
+        `);
+        
+        // Dodanie zawartości pliku
+        repositoriesList.append(`
+            <div class="aica-file-content">
+                <pre><code class="language-${getLanguageFromExtension(fileInfo.extension)}">${escapeHTML(content)}</code></pre>
+            </div>
+        `);
+        
+        // Inicjalizacja podświetlania składni, jeśli jest dostępne
+        if (window.Prism) {
+            try {
+                Prism.highlightAll();
+            } catch (e) {
+                console.error('Błąd podświetlania składni:', e);
+            }
+        }
+        
+        // Obsługa przycisku powrotu
+        $('.aica-back-button').on('click', function() {
+            loadRepository(currentRepositoryId);
+        });
+        
+        // Obsługa przycisku analizy
+        $('.aica-analyze-button').on('click', function() {
+            // Dodanie zawartości pliku do pola tekstowego
+            const messageInput = $('#aica-message-input');
+            const currentText = messageInput.val();
+            const fileAnalysisPrompt = `Proszę przeanalizować ten kod:\n\n\`\`\`${fileInfo.extension}\n${content}\n\`\`\`\n\nCzy możesz wyjaśnić co robi, zidentyfikować potencjalne problemy lub zasugerować optymalizacje?`;
+            
+            messageInput.val(currentText ? `${currentText}\n\n${fileAnalysisPrompt}` : fileAnalysisPrompt);
+            messageInput.trigger('input');
+            
+            // Przełączenie na zakładkę czatu
+            activateTab('chats');
+            
+            // Przewinięcie do pola tekstowego
+            $('html, body').animate({
+                scrollTop: $('#aica-message-input').offset().top - 200
+            }, 500);
+        });
+    }
+    
+    // Funkcja do określania języka na podstawie rozszerzenia pliku
+    function getLanguageFromExtension(extension) {
+        const languageMap = {
+            'php': 'php',
+            'js': 'javascript',
+            'jsx': 'jsx',
+            'ts': 'typescript',
+            'tsx': 'tsx',
+            'html': 'html',
+            'css': 'css',
+            'scss': 'scss',
+            'sass': 'sass',
+            'json': 'json',
+            'xml': 'xml',
+            'md': 'markdown',
+            'py': 'python',
+            'rb': 'ruby',
+            'java': 'java',
+            'c': 'c',
+            'cpp': 'cpp',
+            'cs': 'csharp',
+            'go': 'go',
+            'rs': 'rust',
+            'swift': 'swift',
+            'kt': 'kotlin',
+            'sql': 'sql',
+            'sh': 'bash',
+            'yml': 'yaml',
+            'yaml': 'yaml'
+        };
+        
+        return languageMap[extension.toLowerCase()] || 'plaintext';
     }
     
     // Obsługa plików
@@ -848,7 +1165,7 @@
                     
                     // Dodanie treści pliku do inputu
                     const currentText = $('#aica-message-input').val();
-                    const fileQuestion = `Proszę przeanalizować ten kod:\n\n${response.data.file_content}`;
+                    const fileQuestion = `Proszę przeanalizować ten kod:\n\n\`\`\`${getLanguageFromExtension(file.name.split('.').pop())}\n${response.data.file_content}\n\`\`\``;
                     
                     $('#aica-message-input').val(currentText ? `${currentText}\n\n${fileQuestion}` : fileQuestion);
                     $('#aica-message-input').trigger('input');

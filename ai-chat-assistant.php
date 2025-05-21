@@ -1,238 +1,188 @@
 <?php
 /**
- * AI Chat Assistant
- *
- * @package     AIChatAssistant
- * @author      Twoja Nazwa
- * @copyright   2023 Twoja Nazwa
- * @license     GPL-2.0+
- *
- * @wordpress-plugin
  * Plugin Name: AI Chat Assistant
- * Plugin URI:  https://example.com/plugin
- * Description: Integracja czatu z API Claude.ai dla programistów
- * Version:     1.0.0
- * Author:      Twoja Nazwa
+ * Plugin URI: https://twoja-domena.pl/plugins/ai-chat-assistant
+ * Description: Asystent AI oparty na Claude.ai od Anthropic dla WordPressa
+ * Version: 1.0.0
+ * Author: Twoje Imię
+ * Author URI: https://twoja-domena.pl
+ * License: GPL-2.0+
  * Text Domain: ai-chat-assistant
  * Domain Path: /languages
  */
 
-// Jeśli plik jest wywołany bezpośrednio, zakończ
+// Bezpośredni dostęp do pliku jest zabroniony
 if (!defined('ABSPATH')) {
     exit;
 }
 
 // Definicje stałych
-define('AICA_PLUGIN_FILE', __FILE__);
+define('AICA_VERSION', '1.0.0');
 define('AICA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AICA_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('AICA_VERSION', '1.0.0');
+define('AICA_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
-// Ładowanie pliku z funkcjami pomocniczymi dla diagnostyki
-require_once AICA_PLUGIN_DIR . 'includes/Helpers/DiagnosticsHelper.php';
+// Ładowanie funkcji pomocniczych
+require_once AICA_PLUGIN_DIR . 'includes/helpers.php';
 
-// Autoloader klas
+// Autoloader dla klas
 spl_autoload_register(function ($class) {
-    // Prefiks naszej wtyczki
+    // Przestrzeń nazw wtyczki
     $prefix = 'AICA\\';
     $base_dir = AICA_PLUGIN_DIR . 'includes/';
-
-    // Jeśli klasa nie używa naszego prefiksu, przejdź dalej
     $len = strlen($prefix);
+    
     if (strncmp($prefix, $class, $len) !== 0) {
         return;
     }
-
-    // Ścieżka do pliku klasy
+    
     $relative_class = substr($class, $len);
     $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-
-    // Jeśli plik istnieje, załaduj go
+    
     if (file_exists($file)) {
         require $file;
     }
 });
 
-// Inicjalizacja wtyczki
-function aica_init() {
-    $plugin = new AICA\Main();
-    $plugin->run();
-}
-add_action('plugins_loaded', 'aica_init');
-
-// Akcje aktywacji i deaktywacji
-register_activation_hook(__FILE__, function() {
-    $installer = new AICA\Installer();
-    $installer->activate();
-});
-
-register_deactivation_hook(__FILE__, function() {
-    $installer = new AICA\Installer();
-    $installer->deactivate();
-});
-
-// Rejestracja punktów połączenia AJAX dla repozytoriów
-function aica_ajax_repository_hooks() {
-    // Rejestracja punktów połączenia AJAX
-    add_action('wp_ajax_aica_add_repository', 'aica_ajax_add_repository');
-    add_action('wp_ajax_aica_delete_repository', 'aica_ajax_delete_repository');
-    add_action('wp_ajax_aica_refresh_repository', 'aica_ajax_refresh_repository');
-    add_action('wp_ajax_aica_get_repository_details', 'aica_ajax_get_repository_details');
-    add_action('wp_ajax_aica_get_repository_files', 'aica_ajax_get_repository_files');
-    add_action('wp_ajax_aica_get_file_content', 'aica_ajax_get_file_content');
-}
-add_action('init', 'aica_ajax_repository_hooks');
-
-// Funkcje AJAX dla repozytoriów
-function aica_ajax_add_repository() {
-    // Sprawdź nonce
-    check_ajax_referer('aica_repository_nonce', 'nonce');
+// Główna klasa wtyczki
+class AI_Chat_Assistant {
+    private static $instance;
     
-    // Pobierz dane
-    $type = isset($_POST['repo_type']) ? sanitize_text_field($_POST['repo_type']) : '';
-    $name = isset($_POST['repo_name']) ? sanitize_text_field($_POST['repo_name']) : '';
-    $owner = isset($_POST['repo_owner']) ? sanitize_text_field($_POST['repo_owner']) : '';
-    $url = isset($_POST['repo_url']) ? esc_url_raw($_POST['repo_url']) : '';
-    $repo_id = isset($_POST['repo_external_id']) ? sanitize_text_field($_POST['repo_external_id']) : '';
-    $description = isset($_POST['repo_description']) ? sanitize_text_field($_POST['repo_description']) : '';
-    
-    if (empty($type) || empty($name) || empty($owner) || empty($url)) {
-        wp_send_json_error(['message' => __('Brakujące dane repozytorium.', 'ai-chat-assistant')]);
-        return;
+    public static function get_instance() {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
     }
     
-    // Dodaj repozytorium
-    $repo_service = new \AICA\Services\RepositoryService();
-    $result = $repo_service->save_repository($type, $name, $owner, $url, $repo_id, $description);
-    
-    if ($result) {
-        wp_send_json_success(['message' => __('Repozytorium zostało dodane.', 'ai-chat-assistant'), 'repo_id' => $result]);
-    } else {
-        wp_send_json_error(['message' => __('Nie udało się dodać repozytorium.', 'ai-chat-assistant')]);
-    }
-}
-
-function aica_ajax_delete_repository() {
-    // Sprawdź nonce
-    check_ajax_referer('aica_repository_nonce', 'nonce');
-    
-    // Pobierz dane
-    $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
-    
-    if (empty($repo_id)) {
-        wp_send_json_error(['message' => __('Nieprawidłowe ID repozytorium.', 'ai-chat-assistant')]);
-        return;
-    }
-    
-    // Usuń repozytorium
-    $repo_service = new \AICA\Services\RepositoryService();
-    $result = $repo_service->delete_repository($repo_id);
-    
-    if ($result) {
-        wp_send_json_success(['message' => __('Repozytorium zostało usunięte.', 'ai-chat-assistant')]);
-    } else {
-        wp_send_json_error(['message' => __('Nie udało się usunąć repozytorium.', 'ai-chat-assistant')]);
-    }
-}
-
-function aica_ajax_refresh_repository() {
-    // Sprawdź nonce
-    check_ajax_referer('aica_repository_nonce', 'nonce');
-    
-    // Pobierz dane
-    $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
-    
-    if (empty($repo_id)) {
-        wp_send_json_error(['message' => __('Nieprawidłowe ID repozytorium.', 'ai-chat-assistant')]);
-        return;
-    }
-    
-    // Odśwież metadane repozytorium
-    $repo_service = new \AICA\Services\RepositoryService();
-    $result = $repo_service->refresh_repository_metadata($repo_id);
-    
-    if ($result) {
-        wp_send_json_success(['message' => __('Metadane repozytorium zostały zaktualizowane.', 'ai-chat-assistant')]);
-    } else {
-        wp_send_json_error(['message' => __('Nie udało się odświeżyć metadanych repozytorium.', 'ai-chat-assistant')]);
-    }
-}
-
-function aica_ajax_get_repository_details() {
-    // Sprawdź nonce
-    check_ajax_referer('aica_repository_nonce', 'nonce');
-    
-    // Pobierz dane
-    $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
-    
-    if (empty($repo_id)) {
-        wp_send_json_error(['message' => __('Nieprawidłowe ID repozytorium.', 'ai-chat-assistant')]);
-        return;
-    }
-    
-    // Pobierz szczegóły repozytorium
-    $repo_service = new \AICA\Services\RepositoryService();
-    $repo = $repo_service->get_repository($repo_id);
-    
-    if ($repo) {
-        // Pobierz dostępne gałęzie
-        $branches = $repo_service->get_repository_branches($repo_id);
+    private function __construct() {
+        // Inicjalizacja wtyczki
+        add_action('plugins_loaded', [$this, 'init']);
         
-        wp_send_json_success([
-            'repository' => $repo,
-            'branches' => $branches
+        // Aktywacja i deaktywacja wtyczki
+        register_activation_hook(__FILE__, [$this, 'activate']);
+        register_deactivation_hook(__FILE__, [$this, 'deactivate']);
+    }
+    
+    public function init() {
+        // Załadowanie tłumaczeń
+        load_plugin_textdomain('ai-chat-assistant', false, dirname(AICA_PLUGIN_BASENAME) . '/languages');
+        
+        // Inicjalizacja klasy Admin
+        if (is_admin()) {
+            $admin = new AICA\Main();
+        }
+        
+        // Inicjalizacja obsługi AJAX
+        $ajax_handler = new AICA\Ajax\AjaxManager();
+        
+        // Dodanie skrótów [aica_chat] i [aica_assistant]
+        add_shortcode('aica_chat', [$this, 'render_chat_shortcode']);
+        add_shortcode('aica_assistant', [$this, 'render_assistant_shortcode']);
+    }
+    
+    /**
+     * Aktywacja wtyczki
+     */
+    public function activate() {
+        // Utworzenie tabel bazy danych
+        $db_setup = new AICA\Installer();
+        $db_setup->create_tables();
+        
+        // Domyślne ustawienia
+        if (!aica_get_option('claude_model')) {
+            aica_update_option('claude_model', 'claude-3-haiku-20240307');
+        }
+        
+        if (!aica_get_option('max_tokens')) {
+            aica_update_option('max_tokens', 4000);
+        }
+        
+        if (!aica_get_option('temperature')) {
+            aica_update_option('temperature', 0.7);
+        }
+        
+        // Utworzenie katalogów
+        $upload_dir = WP_CONTENT_DIR . '/uploads/aica-files';
+        if (!file_exists($upload_dir)) {
+            wp_mkdir_p($upload_dir);
+            
+            // Zabezpiecz katalog przed dostępem z zewnątrz
+            file_put_contents($upload_dir . '/.htaccess', 'Deny from all');
+        }
+        
+        // Oznacz, że wtyczka została aktywowana
+        aica_update_option('activated', true);
+    }
+    
+    /**
+     * Deaktywacja wtyczki
+     */
+    public function deactivate() {
+        // Oznacz, że wtyczka została dezaktywowana
+        aica_update_option('activated', false);
+    }
+    
+    /**
+     * Rendering skrótu [aica_chat]
+     */
+    public function render_chat_shortcode($atts) {
+        $atts = shortcode_atts([
+            'theme' => 'light',
+            'height' => '500px',
+            'width' => '100%'
+        ], $atts);
+        
+        // Załadowanie potrzebnych skryptów i stylów
+        wp_enqueue_style('aica-front-chat', AICA_PLUGIN_URL . 'assets/css/front-chat.css', [], AICA_VERSION);
+        wp_enqueue_script('aica-front-chat', AICA_PLUGIN_URL . 'assets/js/front-chat.js', ['jquery'], AICA_VERSION, true);
+        
+        // Przekazanie danych do skryptu
+        wp_localize_script('aica-front-chat', 'aica_data', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('aica_front_nonce'),
+            'settings' => [
+                'claude_model' => aica_get_option('claude_model', 'claude-3-haiku-20240307'),
+                'claude_api_key' => !empty(aica_get_option('claude_api_key', ''))
+            ]
         ]);
-    } else {
-        wp_send_json_error(['message' => __('Nie znaleziono repozytorium.', 'ai-chat-assistant')]);
+        
+        // Wczytanie szablonu
+        ob_start();
+        include AICA_PLUGIN_DIR . 'templates/front/chat.php';
+        return ob_get_clean();
+    }
+    
+    /**
+     * Rendering skrótu [aica_assistant]
+     */
+    public function render_assistant_shortcode($atts) {
+        $atts = shortcode_atts([
+            'position' => 'right',
+            'welcome_message' => __('Witaj! Jak mogę Ci pomóc?', 'ai-chat-assistant')
+        ], $atts);
+        
+        // Załadowanie potrzebnych skryptów i stylów
+        wp_enqueue_style('aica-front-assistant', AICA_PLUGIN_URL . 'assets/css/front-assistant.css', [], AICA_VERSION);
+        wp_enqueue_script('aica-front-assistant', AICA_PLUGIN_URL . 'assets/js/front-assistant.js', ['jquery'], AICA_VERSION, true);
+        
+        // Przekazanie danych do skryptu
+        wp_localize_script('aica-front-assistant', 'aica_data', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('aica_front_nonce'),
+            'settings' => [
+                'claude_model' => aica_get_option('claude_model', 'claude-3-haiku-20240307'),
+                'claude_api_key' => !empty(aica_get_option('claude_api_key', ''))
+            ],
+            'welcome_message' => $atts['welcome_message']
+        ]);
+        
+        // Wczytanie szablonu
+        ob_start();
+        include AICA_PLUGIN_DIR . 'templates/front/assistant.php';
+        return ob_get_clean();
     }
 }
 
-function aica_ajax_get_repository_files() {
-    // Sprawdź nonce
-    check_ajax_referer('aica_repository_nonce', 'nonce');
-    
-    // Pobierz dane
-    $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
-    $path = isset($_POST['path']) ? sanitize_text_field($_POST['path']) : '';
-    $branch = isset($_POST['branch']) ? sanitize_text_field($_POST['branch']) : 'main';
-    
-    if (empty($repo_id)) {
-        wp_send_json_error(['message' => __('Nieprawidłowe ID repozytorium.', 'ai-chat-assistant')]);
-        return;
-    }
-    
-    // Pobierz pliki repozytorium
-    $repo_service = new \AICA\Services\RepositoryService();
-    $files = $repo_service->get_repository_files($repo_id, $path, $branch);
-    
-    if (is_array($files)) {
-        wp_send_json_success(['files' => $files]);
-    } else {
-        wp_send_json_error(['message' => __('Nie udało się pobrać plików repozytorium.', 'ai-chat-assistant')]);
-    }
-}
-
-function aica_ajax_get_file_content() {
-    // Sprawdź nonce
-    check_ajax_referer('aica_repository_nonce', 'nonce');
-    
-    // Pobierz dane
-    $repo_id = isset($_POST['repo_id']) ? intval($_POST['repo_id']) : 0;
-    $path = isset($_POST['path']) ? sanitize_text_field($_POST['path']) : '';
-    $branch = isset($_POST['branch']) ? sanitize_text_field($_POST['branch']) : 'main';
-    
-    if (empty($repo_id) || empty($path)) {
-        wp_send_json_error(['message' => __('Nieprawidłowe dane pliku.', 'ai-chat-assistant')]);
-        return;
-    }
-    
-    // Pobierz zawartość pliku
-    $repo_service = new \AICA\Services\RepositoryService();
-    $file_content = $repo_service->get_file_content($repo_id, $path, $branch);
-    
-    if ($file_content) {
-        wp_send_json_success($file_content);
-    } else {
-        wp_send_json_error(['message' => __('Nie udało się pobrać zawartości pliku.', 'ai-chat-assistant')]);
-    }
-}
+// Inicjalizacja wtyczki
+AI_Chat_Assistant::get_instance();

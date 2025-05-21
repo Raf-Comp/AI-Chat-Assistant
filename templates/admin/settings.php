@@ -151,6 +151,31 @@ wp_localize_script('aica-settings-scripts', 'aica_data', [
                             <div class="aica-models-grid">
                                 <?php 
                                 $current_model = aica_get_option('claude_model', 'claude-3-haiku-20240307');
+                                
+                                // Upewnij się, że $available_models jest tablicą i zawiera wszystkie dostępne modele
+                                if (!is_array($available_models) || empty($available_models)) {
+                                    $available_models = [
+                                        // Najnowsze modele Claude 3.5
+                                        'claude-3-5-sonnet-20240620' => 'Claude 3.5 Sonnet (2024-06-20)',
+                                        
+                                        // Modele Claude 3
+                                        'claude-3-opus-20240229' => 'Claude 3 Opus (2024-02-29)',
+                                        'claude-3-sonnet-20240229' => 'Claude 3 Sonnet (2024-02-29)',
+                                        'claude-3-haiku-20240307' => 'Claude 3 Haiku (2024-03-07)',
+                                        
+                                        // Modele Claude 2
+                                        'claude-2.1' => 'Claude 2.1',
+                                        'claude-2.0' => 'Claude 2.0',
+                                        
+                                        // Modele Claude Instant
+                                        'claude-instant-1.2' => 'Claude Instant 1.2',
+                                        
+                                        // Nadchodzące modele (przykładowe)
+                                        'claude-3-7-sonnet-20250219' => 'Claude 3.7 Sonnet (2025-02-19)',
+                                        'claude-3-5-haiku-20240830' => 'Claude 3.5 Haiku (2024-08-30)',
+                                    ];
+                                }
+                                
                                 foreach ($available_models as $model_id => $model_name) :
                                     // Określenie klasy dla karty modelu
                                     $is_selected = ($current_model === $model_id) ? 'selected' : '';
@@ -434,6 +459,14 @@ wp_localize_script('aica-settings-scripts', 'aica_data', [
                                             [
                                                 'name' => 'Wyjaśnienie technicznej koncepcji',
                                                 'prompt' => 'Wyjaśnij następującą koncepcję w prosty sposób: [TEMAT]'
+                                            ],
+                                            [
+                                                'name' => 'Debugowanie problemu',
+                                                'prompt' => 'Mam błąd w moim kodzie: [OPIS BŁĘDU]. Oto kod: [KOD]. Pomóż mi znaleźć i naprawić problem.'
+                                            ],
+                                            [
+                                                'name' => 'Optymalizacja wydajności',
+                                                'prompt' => 'Jak mogę zoptymalizować ten fragment kodu/zapytanie, aby działało szybciej? [KOD/ZAPYTANIE]'
                                             ]
                                         ]);
                                         
@@ -520,11 +553,11 @@ wp_localize_script('aica-settings-scripts', 'aica_data', [
                 </div>
                 
                 <div class="aica-form-actions">
-    <button type="submit" name="aica_save_settings" class="aica-button aica-button-primary">
-        <span class="dashicons dashicons-saved"></span>
-        <?php _e('Zapisz ustawienia', 'ai-chat-assistant'); ?>
-    </button>
-</div>
+                    <button type="submit" name="aica_save_settings" class="aica-button aica-button-primary">
+                        <span class="dashicons dashicons-saved"></span>
+                        <?php _e('Zapisz ustawienia', 'ai-chat-assistant'); ?>
+                    </button>
+                </div>
             </form>
         </div>
     </div>

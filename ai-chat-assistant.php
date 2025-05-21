@@ -71,6 +71,7 @@ class AI_Chat_Assistant {
         // Inicjalizacja klasy Admin
         if (is_admin()) {
             $admin = new AICA\Main();
+            $admin->run();
         }
         
         // Inicjalizacja obsługi AJAX
